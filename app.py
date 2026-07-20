@@ -12,11 +12,17 @@ def create_app(config_overrides: dict | None = None) -> Flask:
 
     db.init_app(app)
 
-    from pages.calendar.routes import calendar_bp
-    from pages.chat.routes import chat_bp
+    try:
+        from pages.calendar.routes import calendar_bp
+        app.register_blueprint(calendar_bp)
+    except ImportError:
+        pass
 
-    app.register_blueprint(calendar_bp)
-    app.register_blueprint(chat_bp)
+    try:
+        from pages.chat.routes import chat_bp
+        app.register_blueprint(chat_bp)
+    except ImportError:
+        pass
 
     with app.app_context():
         db.create_all()
