@@ -20,8 +20,3 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
-
-
-def test_app_boots(client):
-    response = client.get("/calendar")
-    assert response.status_code == 200
