@@ -50,5 +50,5 @@ def classify(provider: Provider, user_message: str, active_page: str) -> RouteDe
         if tier not in TIER_MODELS:
             tier = "sonnet"
         return RouteDecision(tier=tier, skills=skills)
-    except (json.JSONDecodeError, AttributeError):
+    except (json.JSONDecodeError, AttributeError, TypeError):
         return RouteDecision(tier="sonnet", skills=[])

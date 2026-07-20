@@ -42,3 +42,13 @@ def test_classify_falls_back_to_sonnet_on_bad_json():
     decision = classify(provider, "hello", "calendar")
     assert decision.tier == "sonnet"
     assert decision.skills == []
+
+
+def test_classify_falls_back_to_sonnet_on_none_response_text():
+    provider = MagicMock()
+    provider.complete.return_value = ProviderResponse(
+        text=None, tool_calls=[], input_tokens=5, output_tokens=5
+    )
+    decision = classify(provider, "hello", "calendar")
+    assert decision.tier == "sonnet"
+    assert decision.skills == []
