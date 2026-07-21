@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Calendar{% endblock %}
+{% set active_page = "calendar" %}
+{% block content %}
+  <h1>Calendar</h1>
+  <div id="calendar"></div>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+{% endblock %}

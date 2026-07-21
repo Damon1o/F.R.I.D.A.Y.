@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}AI Assistant{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body data-active-page="{{ active_page }}">
+  <div class="layout">
+    <nav class="sidebar">
+      <a href="{{ url_for('calendar.calendar_page') }}">Calendar</a>
+    </nav>
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+    <aside class="chat-panel">
+      <div id="chat-messages" class="chat-messages"></div>
+      <div id="token-usage" class="token-usage"></div>
+      <form id="chat-form">
+        <textarea id="chat-input" placeholder="Ask your assistant..."></textarea>
+        <button type="submit">Send</button>
+      </form>
+    </aside>
+  </div>
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
