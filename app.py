@@ -19,6 +19,12 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         pass
 
     try:
+        from pages.dashboard.routes import dashboard_bp
+        app.register_blueprint(dashboard_bp)
+    except ImportError:
+        pass
+
+    try:
         from pages.chat.routes import chat_bp
         app.register_blueprint(chat_bp)
     except ImportError:
