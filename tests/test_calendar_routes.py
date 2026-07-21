@@ -2,6 +2,7 @@ def test_calendar_page_renders(client):
     response = client.get("/calendar")
     assert response.status_code == 200
     assert b"calendar" in response.data.lower()
+    assert b'id="calendar-fab"' in response.data
 
 
 def test_calendar_events_api_returns_json_list(client):
