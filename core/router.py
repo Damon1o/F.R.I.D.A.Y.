@@ -5,8 +5,8 @@ from core.providers.base import Provider
 
 TIER_MODELS = {
     "haiku": "claude-haiku-4-5",
-    "sonnet": "claude-sonnet-4-5",
-    "opus": "claude-opus-4-5",
+    "sonnet": "claude-sonnet-5",
+    "opus": "claude-fable-5",
 }
 
 _CLASSIFIER_SYSTEM_PROMPT = """You are a request router for a personal AI assistant.
@@ -17,7 +17,7 @@ a JSON object (no other text) of the form:
 Tier guidance:
 - "haiku": simple, unambiguous single-step requests
 - "sonnet": default tier for most real work, multi-step reasoning, drafting
-- "opus": genuinely complex, high-stakes, or multi-constraint planning
+- "opus": genuinely complex, high-stakes, or multi-constraint planning (routed to Claude Fable 5)
 
 "skills" should list which page(s) this request needs tools/context for
 (e.g. "calendar"). If none apply, use an empty list.
@@ -28,6 +28,8 @@ Tier guidance:
 class RouteDecision:
     tier: str
     skills: list[str]
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 def classify(provider: Provider, user_message: str, active_page: str) -> RouteDecision:
@@ -49,6 +51,16 @@ def classify(provider: Provider, user_message: str, active_page: str) -> RouteDe
         skills = parsed.get("skills", [])
         if tier not in TIER_MODELS:
             tier = "sonnet"
-        return RouteDecision(tier=tier, skills=skills)
+        return RouteDecision(
+            tier=tier,
+            skills=skills,
+            input_tokens=response.input_tokens,
+            output_tokens=response.output_tokens,
+        )
     except (json.JSONDecodeError, AttributeError, TypeError):
-        return RouteDecision(tier="sonnet", skills=[])
+        return RouteDecision(
+            tier="sonnet",
+            skills=[],
+            input_tokens=response.input_tokens,
+            output_tokens=response.output_tokens,
+        )
