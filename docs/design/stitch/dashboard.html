@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kiko | Obsidian Glass Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Hanken Grotesk', sans-serif;
+            background-color: #0e0e0e; /* surface-container-lowest */
+            color: #e5e2e1; /* on-surface */
+            overflow-x: hidden;
+        }
+
+        .glass-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .inner-glow {
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .active-glow {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        .animate-pulse-subtle { animation: pulse-subtle 3s infinite ease-in-out; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#690005",
+                        "tertiary-fixed-dim": "#c8c6c5",
+                        "surface": "#131313",
+                        "outline": "#8e9192",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "secondary-fixed": "#e4e2e1",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary-fixed": "#e5e2e1",
+                        "on-secondary-container": "#b6b5b4",
+                        "on-surface": "#e5e2e1",
+                        "surface-container": "#201f1f",
+                        "error": "#ffb4ab",
+                        "primary-fixed": "#e2e2e2",
+                        "secondary-container": "#474747",
+                        "on-primary-container": "#636565",
+                        "surface-variant": "#353534",
+                        "surface-container-low": "#1c1b1b",
+                        "secondary-fixed-dim": "#c8c6c6",
+                        "secondary": "#c8c6c6",
+                        "on-secondary": "#303030",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed": "#1c1b1b",
+                        "outline-variant": "#444748",
+                        "primary-container": "#e2e2e2",
+                        "primary-fixed-dim": "#c6c6c7",
+                        "on-primary-fixed": "#1a1c1c",
+                        "on-secondary-fixed-variant": "#474747",
+                        "on-primary": "#2f3131",
+                        "inverse-surface": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "surface-dim": "#131313",
+                        "inverse-on-surface": "#313030",
+                        "tertiary": "#ffffff",
+                        "on-tertiary-container": "#656464",
+                        "on-surface-variant": "#c4c7c8",
+                        "tertiary-container": "#e5e2e1",
+                        "surface-container-highest": "#353534",
+                        "surface-bright": "#3a3939",
+                        "surface-tint": "#c6c6c7",
+                        "on-tertiary": "#313030",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-tertiary-fixed-variant": "#474746",
+                        "primary": "#ffffff",
+                        "background": "#131313",
+                        "on-background": "#e5e2e1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-padding": "24px",
+                        "gutter": "16px",
+                        "margin-desktop": "40px",
+                        "unit": "8px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Hanken Grotesk"],
+                        "label-sm": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background min-h-screen">
+<!-- Background Shader -->
+
+<!-- SideNavBar (Authority Source Mapping) -->
+<aside class="hidden md:flex h-screen w-64 fixed left-0 top-0 bg-surface-container/40 backdrop-blur-2xl border-r border-white/5 flex-col py-margin-desktop px-gutter z-50">
+<div class="flex items-center gap-3 px-2 mb-12">
+<div class="w-10 h-10 bg-primary flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-on-primary">bolt</span>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary">Kiko</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant opacity-60">Productivity</p>
+</div>
+</div>
+<nav class="flex-1 space-y-2">
+<!-- Dashboard is Active -->
+<a class="flex items-center gap-3 px-4 py-3 text-primary bg-white/10 rounded-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-lg transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">checklist</span>
+<span class="font-label-sm text-label-sm">Tasks</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-lg transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-label-sm text-label-sm">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-lg transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-label-sm text-label-sm">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-lg transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+</nav>
+<button class="mt-auto w-full py-3 bg-primary text-on-primary rounded-lg font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span>New Task</span>
+</button>
+</aside>
+<!-- NavigationDrawer (AI Assistant) -->
+<aside class="hidden lg:flex h-screen w-80 fixed right-0 top-0 bg-surface-container-high/30 backdrop-blur-3xl border-l border-white/10 flex-col p-6 z-50">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h2 class="font-headline-lg text-[24px] text-primary leading-tight">Kiko Bot</h2>
+<p class="text-on-surface-variant text-sm">AI Assistant</p>
+</div>
+<div class="w-12 h-12 glass-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-weight="fill">smart_toy</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto space-y-4 pr-1">
+<div class="glass-container p-4 rounded-xl text-sm leading-relaxed text-on-surface-variant">
+<p>Good morning! You have 3 high-priority tasks due before noon. Would you like me to reschedule your 11 AM meeting?</p>
+</div>
+<div class="bg-white/5 p-4 rounded-xl text-sm leading-relaxed self-end ml-8 text-on-surface border border-white/5">
+<p>Not now, show me the analytics for the week first.</p>
+</div>
+<div class="glass-container p-4 rounded-xl text-sm leading-relaxed text-on-surface-variant flex gap-3">
+<div class="mt-1 animate-pulse-subtle">
+<span class="material-symbols-outlined text-primary text-[18px]">auto_awesome</span>
+</div>
+<p>Analyzing productivity trends... Your peak focus hours were between 8 AM and 10 AM on Tuesday. I've updated the focus graph.</p>
+</div>
+</div>
+<div class="mt-6">
+<div class="relative group">
+<input class="w-full bg-surface-container-lowest border-white/10 border rounded-xl py-3 px-4 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all" placeholder="Ask Kiko Bot..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant cursor-pointer hover:text-primary">send</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:pl-64 lg:pr-80 min-h-screen">
+<!-- TopNavBar (Authority Mapping) -->
+<header class="w-full sticky top-0 bg-surface/60 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-margin-desktop h-20 z-40">
+<div class="flex items-center gap-6">
+<div class="md:hidden">
+<span class="material-symbols-outlined text-primary">menu</span>
+</div>
+<div class="relative hidden sm:block w-64">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full bg-white/5 border-none rounded-full py-2 pl-10 pr-4 text-body-md font-body-md focus:ring-1 focus:ring-white/20 transition-all" placeholder="Global search" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center glass-container rounded-full hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-primary">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center glass-container rounded-full hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-primary">bolt</span>
+</button>
+<div class="h-10 w-10 rounded-full overflow-hidden border border-white/20 ml-2">
+<img class="w-full h-full object-cover" data-alt="A professional close-up portrait of a tech executive in a dark environment, wearing minimalist black attire. The lighting is low-key with a soft blue rim light, creating a high-tech, luxury vibe consistent with obsidian glass aesthetics. The background is softly blurred and monochromatic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3FFhEZDlc2l-mBuw3QCg3Mi2xVU8FNboMix5Kwyac1sYSn8aPFkOtGMM1diAR0XgeRB7wgLs-SJMGEOfRHgMFHzC3VaaTT1mZF7FAHBDcvZn-n5r76rDc7Feg5lFV7mPntfVKfe_0k-sVinYoY4Ct3dzC28erpiERRx6hTQbaJL-GZ-NwLXZXI29cp27y6-iH90BQ1znZIbrrRklbFAeWAx1my23nbV-ljYxn-JKNYZpzoqHmavLT"/>
+</div>
+</div>
+</header>
+<!-- Dashboard Body -->
+<div class="p-margin-desktop space-y-gutter">
+<!-- Greeting & Header -->
+<section class="mb-8">
+<h1 class="font-display-lg text-display-lg mb-2">Hello, Alexander.</h1>
+<p class="text-on-surface-variant text-body-md flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">verified</span>
+                    You've completed 82% of your goals this week. Keep the momentum.
+                </p>
+</section>
+<!-- Bento Grid Dashboard -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-gutter">
+<!-- Weekly Focus Graph -->
+<div class="xl:col-span-2 glass-container rounded-xl p-8 relative overflow-hidden group">
+<div class="flex justify-between items-start mb-12">
+<div>
+<h3 class="text-on-surface font-headline-lg text-[24px]">Weekly Focus</h3>
+<p class="text-on-surface-variant text-label-sm">Productivity trends vs. Target</p>
+</div>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-white/5 rounded-full text-[10px] uppercase border border-white/10">Mon - Sun</span>
+<span class="px-3 py-1 bg-primary text-on-primary rounded-full text-[10px] uppercase font-bold">+12%</span>
+</div>
+</div>
+<!-- Line Graph Mockup -->
+<div class="h-48 w-full flex items-end gap-1 relative">
+<svg class="absolute inset-0 w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 1000 100">
+<path class="drop-shadow-lg" d="M0,80 Q100,20 200,60 T400,10 T600,40 T800,20 T1000,0" fill="none" stroke="white" stroke-width="3"></path>
+<path d="M0,80 Q100,20 200,60 T400,10 T600,40 T800,20 T1000,0 V100 H0 Z" fill="url(#gradient-glass)" opacity="0.1"></path>
+<defs>
+<lineargradient id="gradient-glass" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="white"></stop>
+<stop offset="100%" stop-color="transparent"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="absolute bottom-0 left-0 w-full flex justify-between px-2 text-[10px] text-on-surface-variant/40 font-bold uppercase tracking-widest mt-4">
+<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+</div>
+</div>
+</div>
+<!-- Calendar Widget -->
+<div class="glass-container rounded-xl p-6 flex flex-col h-full">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-on-surface font-headline-lg text-[20px]">October</h3>
+<div class="flex gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-white/5"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-white/5"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</div>
+</div>
+<div class="grid grid-cols-7 gap-y-4 text-center">
+<span class="text-[10px] text-on-surface-variant opacity-40">M</span>
+<span class="text-[10px] text-on-surface-variant opacity-40">T</span>
+<span class="text-[10px] text-on-surface-variant opacity-40">W</span>
+<span class="text-[10px] text-on-surface-variant opacity-40">T</span>
+<span class="text-[10px] text-on-surface-variant opacity-40">F</span>
+<span class="text-[10px] text-on-surface-variant opacity-40">S</span>
+<span class="text-[10px] text-on-surface-variant opacity-40">S</span>
+<span class="text-sm opacity-20">28</span>
+<span class="text-sm opacity-20">29</span>
+<span class="text-sm opacity-20">30</span>
+<span class="text-sm">1</span>
+<span class="text-sm">2</span>
+<span class="text-sm text-primary font-bold">3</span>
+<span class="text-sm">4</span>
+<!-- Highlights -->
+<div class="relative flex justify-center">
+<span class="text-sm">12</span>
+<span class="absolute -bottom-1 w-1 h-1 bg-primary rounded-full"></span>
+</div>
+<span class="text-sm">13</span>
+<span class="text-sm bg-white/10 rounded-full flex items-center justify-center w-8 h-8 mx-auto -mt-1 shadow-inner ring-1 ring-white/10">14</span>
+<span class="text-sm">15</span>
+<span class="text-sm">16</span>
+<span class="text-sm">17</span>
+<span class="text-sm">18</span>
+</div>
+<div class="mt-auto pt-6 space-y-3">
+<div class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5">
+<div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+<div class="flex-1">
+<p class="text-xs font-bold">Design Sprint</p>
+<p class="text-[10px] text-on-surface-variant">10:00 AM - 11:30 AM</p>
+</div>
+</div>
+</div>
+</div>
+<!-- High-level Summary Tasks -->
+<div class="xl:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-gutter">
+<div class="glass-container rounded-xl p-6 flex items-center gap-4 group hover:bg-white/10 transition-all cursor-pointer">
+<div class="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center inner-glow group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary">priority_high</span>
+</div>
+<div>
+<p class="text-on-surface-variant text-label-sm">High Priority</p>
+<h4 class="text-headline-lg text-[24px]">04</h4>
+</div>
+</div>
+<div class="glass-container rounded-xl p-6 flex items-center gap-4 group hover:bg-white/10 transition-all cursor-pointer">
+<div class="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center inner-glow group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary">sync</span>
+</div>
+<div>
+<p class="text-on-surface-variant text-label-sm">In Progress</p>
+<h4 class="text-headline-lg text-[24px]">12</h4>
+</div>
+</div>
+<div class="glass-container rounded-xl p-6 flex items-center gap-4 group hover:bg-white/10 transition-all cursor-pointer">
+<div class="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center inner-glow group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary" data-weight="fill">check_circle</span>
+</div>
+<div>
+<p class="text-on-surface-variant text-label-sm">Completed</p>
+<h4 class="text-headline-lg text-[24px]">158</h4>
+</div>
+</div>
+<div class="glass-container rounded-xl p-6 flex items-center gap-4 group hover:bg-white/10 transition-all cursor-pointer">
+<div class="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center inner-glow group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary">schedule</span>
+</div>
+<div>
+<p class="text-on-surface-variant text-label-sm">Backlog</p>
+<h4 class="text-headline-lg text-[24px]">24</h4>
+</div>
+</div>
+</div>
+<!-- Recent Activities (List View) -->
+<div class="xl:col-span-3 glass-container rounded-xl overflow-hidden">
+<div class="p-6 border-b border-white/10 flex justify-between items-center">
+<h3 class="font-headline-lg text-[20px]">Recent Activity</h3>
+<button class="text-on-surface-variant text-xs hover:text-primary transition-colors">View All History</button>
+</div>
+<div class="divide-y divide-white/5">
+<div class="flex items-center gap-4 p-6 hover:bg-white/5 transition-colors group">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[20px]">folder</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-semibold">Refactored Design System Components</p>
+<p class="text-[11px] text-on-surface-variant">2 hours ago • Project: Obsidian Glass UI</p>
+</div>
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border border-surface bg-gray-500"></div>
+<div class="w-6 h-6 rounded-full border border-surface bg-gray-700"></div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">more_vert</span>
+</div>
+<div class="flex items-center gap-4 p-6 hover:bg-white/5 transition-colors group">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[20px]">description</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-semibold">Q4 Strategic Overview - Draft v2</p>
+<p class="text-[11px] text-on-surface-variant">5 hours ago • Project: Corporate Growth</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 bg-yellow-500/10 text-yellow-500 text-[9px] rounded border border-yellow-500/20 uppercase font-bold">Reviewing</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">more_vert</span>
+</div>
+<div class="flex items-center gap-4 p-6 hover:bg-white/5 transition-colors group">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[20px]">task_alt</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-semibold">Onboarded New Engineering Leads</p>
+<p class="text-[11px] text-on-surface-variant">Yesterday • Internal Ops</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 bg-green-500/10 text-green-500 text-[9px] rounded border border-green-500/20 uppercase font-bold">Done</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">more_vert</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button (Contextual Support) -->
+<button class="fixed bottom-margin-desktop right-[340px] hidden lg:flex w-14 h-14 bg-primary text-on-primary rounded-full items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all z-40 group">
+<span class="material-symbols-outlined transition-transform group-hover:rotate-90">add</span>
+</button>
+<script>
+        // Micro-interactions and atmospheric effects
+        document.addEventListener('mousemove', (e) => {
+            const cards = document.querySelectorAll('.glass-container');
+            const x = e.clientX;
+            const y = e.clientY;
+
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const dx = x - (rect.left + rect.width / 2);
+                const dy = y - (rect.top + rect.height / 2);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 400) {
+                    const intensity = 1 - (distance / 400);
+                    card.style.borderColor = `rgba(255, 255, 255, ${0.1 + (intensity * 0.2)})`;
+                } else {
+                    card.style.borderColor = `rgba(255, 255, 255, 0.1)`;
+                }
+            });
+        });
+
+        // Search Bar Focus Effect
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('ring-2', 'ring-primary/20');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('ring-2', 'ring-primary/20');
+        });
+    </script>
+</body></html>

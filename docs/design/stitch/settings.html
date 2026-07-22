@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kiko | Profile &amp; Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#690005",
+                        "tertiary-fixed-dim": "#c8c6c5",
+                        "surface": "#131313",
+                        "outline": "#8e9192",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "secondary-fixed": "#e4e2e1",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary-fixed": "#e5e2e1",
+                        "on-secondary-container": "#b6b5b4",
+                        "on-surface": "#e5e2e1",
+                        "surface-container": "#201f1f",
+                        "error": "#ffb4ab",
+                        "primary-fixed": "#e2e2e2",
+                        "secondary-container": "#474747",
+                        "on-primary-container": "#636565",
+                        "surface-variant": "#353534",
+                        "surface-container-low": "#1c1b1b",
+                        "secondary-fixed-dim": "#c8c6c6",
+                        "secondary": "#c8c6c6",
+                        "on-secondary": "#303030",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed": "#1c1b1b",
+                        "outline-variant": "#444748",
+                        "primary-container": "#e2e2e2",
+                        "primary-fixed-dim": "#c6c6c7",
+                        "on-primary-fixed": "#1a1c1c",
+                        "on-secondary-fixed-variant": "#474747",
+                        "on-primary": "#2f3131",
+                        "inverse-surface": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "surface-dim": "#131313",
+                        "inverse-on-surface": "#313030",
+                        "tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#454747",
+                        "inverse-primary": "#5d5f5f",
+                        "on-tertiary-container": "#656464",
+                        "on-surface-variant": "#c4c7c8",
+                        "tertiary-container": "#e5e2e1",
+                        "surface-container-highest": "#353534",
+                        "surface-bright": "#3a3939",
+                        "surface-tint": "#c6c6c7",
+                        "on-tertiary": "#313030",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-tertiary-fixed-variant": "#474746",
+                        "primary": "#ffffff",
+                        "background": "#131313",
+                        "on-background": "#e5e2e1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-padding": "24px",
+                        "gutter": "16px",
+                        "margin-desktop": "40px",
+                        "unit": "8px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Hanken Grotesk"],
+                        "label-sm": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0e0e0e;
+            color: #e5e2e1;
+            font-family: 'Hanken Grotesk', sans-serif;
+            overflow-x: hidden;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .inner-glow {
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-glow {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+        /* Custom scrollbar for webgl/glass aesthetics */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-background min-h-screen selection:bg-primary/30">
+<!-- Background Atmospheric Layer -->
+<div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+
+</div>
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container/40 backdrop-blur-2xl border-r border-white/5 flex flex-col py-margin-desktop px-gutter z-50 transition-all duration-200 ease-in-out md:flex hidden">
+<div class="flex items-center gap-3 px-2 mb-10">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-background text-[20px]" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary leading-none">Kiko</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-60">Productivity</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px]">checklist</span>
+<span class="font-label-sm text-label-sm">Tasks</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span class="font-label-sm text-label-sm">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px]">insights</span>
+<span class="font-label-sm text-label-sm">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-primary bg-white/10 rounded-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+</nav>
+<div class="mt-auto">
+<button class="w-full bg-primary text-on-primary py-3 rounded-xl font-body-md text-body-md font-bold transition-transform active:scale-95">
+                New Task
+            </button>
+</div>
+</aside>
+<!-- TopNavBar (Shared Component) - Mobile Only/Adaptive -->
+<header class="w-full sticky top-0 bg-surface/60 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-margin-desktop h-20 w-full z-40 md:pl-[296px]">
+<div class="flex items-center gap-4">
+<h2 class="font-headline-lg text-headline-lg text-primary tracking-tight">Settings</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex items-center bg-white/5 rounded-full px-4 py-2 border border-white/10">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md font-body-md placeholder:text-on-surface-variant/50 w-48" placeholder="Search settings..." type="text"/>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">bolt</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-white/20">
+<img class="w-full h-full object-cover" data-alt="A professional close-up headshot of a designer in their 30s with soft cinematic lighting, captured in a high-tech minimalist studio with dark aesthetic and glass partitions. The mood is sophisticated and focused, echoing the monochromatic and premium visual language of the Kiko application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcwA6KryyN8qS7FyLaiqMRCkaKf5QZY80JAkPnUuBcrhinxhqaNS-gZaarurD8GwEcuEu7tF8aILbxuYf5VcWcfInNnmxjgJXb09Si45BEFYvgHYmD1JKXHv3iE4qP001Dh0rhqH0ZAiDmFEbD_Q4dywwV3BsrVCNXwukyw8aCNm5yjTcUmBFbJkZHCi80j4ZxakK2kQRH9WRZHscGFNeB4cbhgJhWqA--fXPV8FNzBSoUg2KCXPcv"/>
+</div>
+</div>
+</div>
+</header>
+<!-- NavigationDrawer (Shared Component - Kiko Bot) -->
+<aside class="h-screen w-80 fixed right-0 top-0 bg-surface-container-high/30 backdrop-blur-3xl border-l border-white/10 flex flex-col p-6 z-50 transition-transform duration-300 lg:translate-x-0 translate-x-full" id="kiko-bot">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-primary">Kiko Bot</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">AI Assistant</p>
+</div>
+<div class="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 inner-glow">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto space-y-4 mb-6 pr-2">
+<div class="glass-card p-4 rounded-xl border-white/5">
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">Hello! I'm Kiko. You're currently viewing your <span class="text-primary font-bold">Account Preferences</span>. Would you like me to help you configure your notification thresholds?</p>
+</div>
+<div class="flex justify-end">
+<div class="bg-primary text-on-primary p-4 rounded-xl max-w-[80%]">
+<p class="font-body-md text-body-md">Show me Obsidian Glass theme details.</p>
+</div>
+</div>
+<div class="glass-card p-4 rounded-xl border-white/5">
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">The <span class="text-primary">Obsidian Glass</span> theme uses high-contrast blacks with deep backdrop blurs (24px). It maximizes focus by reducing chromatic noise.</p>
+</div>
+</div>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest/50 border border-white/10 rounded-xl px-4 py-3 font-body-md text-body-md focus:ring-1 focus:ring-primary/30 transition-all outline-none" placeholder="Ask Kiko..." type="text"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-primary">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="md:ml-64 lg:mr-80 min-h-[calc(100vh-80px)] p-margin-desktop relative">
+<div class="max-w-5xl mx-auto space-y-gutter">
+<!-- Hero Header Section -->
+<section class="mb-12">
+<div class="flex items-center gap-6 mb-4">
+<div class="relative group">
+<div class="w-24 h-24 rounded-3xl overflow-hidden border-2 border-white/20 transition-all group-hover:border-primary/50 cursor-pointer">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a male professional, sleek modern glasses, dark studio lighting with subtle rim light, ultra-high resolution photography, futuristic and clean aesthetic that matches the glassmorphism UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNR9idJWQz5fHXSXbdqHxeaXXRXEWgtIfAcembkSqaU6bmBh9wMXsHFP5-10h5xWXcLfCaP4PYUDjANDll9eGDc9voFwHTeXLnzIWuCsYWp2m0I-u3FNI5aAZ0DTsyD9np4VWXrpU2E_heQ93w7hdPNAa-YYhPSgNMBk0rDZ4RU316xVb7UdIjr4fl1e_0QnpjV0rjCBZKinVenB9BrKmnZfPNtK4O-T8ea97mPXd6hTXYXHlzc-jL"/>
+</div>
+<div class="absolute -bottom-2 -right-2 bg-primary w-8 h-8 rounded-full flex items-center justify-center border-2 border-background cursor-pointer hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-background text-[16px]">edit</span>
+</div>
+</div>
+<div>
+<h1 class="font-display-lg text-display-lg text-primary">Alex Rivera</h1>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2">
+                            Product Designer at Kiko Labs <span class="w-1 h-1 bg-white/20 rounded-full"></span> alex.r@kiko.io
+                        </p>
+</div>
+</div>
+</section>
+<!-- Settings Bento Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Account Preferences (Large Card) -->
+<div class="lg:col-span-8 glass-card rounded-3xl p-8 inner-glow relative overflow-hidden">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-primary">Account Preferences</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Manage your profile details and security settings.</p>
+</div>
+<span class="material-symbols-outlined text-white/20 text-4xl">person</span>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant/70 uppercase">Display Name</label>
+<input class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-body-md text-body-md focus:border-white/30 outline-none transition-all" type="text" value="Alex Rivera"/>
+</div>
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant/70 uppercase">Job Title</label>
+<input class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-body-md text-body-md focus:border-white/30 outline-none transition-all" type="text" value="Product Designer"/>
+</div>
+</div>
+<div class="pt-4 border-t border-white/5">
+<div class="flex items-center justify-between py-4">
+<div>
+<h4 class="font-body-md text-body-md text-primary font-medium">Two-Factor Authentication</h4>
+<p class="text-[14px] text-on-surface-variant opacity-70">Secure your account with an extra layer of protection.</p>
+</div>
+<div class="w-12 h-6 bg-white/10 rounded-full relative p-1 cursor-pointer transition-colors hover:bg-white/20">
+<div class="w-4 h-4 bg-primary rounded-full transition-all translate-x-0"></div>
+</div>
+</div>
+<div class="flex items-center justify-between py-4 border-t border-white/5">
+<div>
+<h4 class="font-body-md text-body-md text-primary font-medium">Public Profile</h4>
+<p class="text-[14px] text-on-surface-variant opacity-70">Allow others to see your productivity metrics.</p>
+</div>
+<div class="w-12 h-6 bg-primary/20 rounded-full relative p-1 cursor-pointer border border-primary/30">
+<div class="w-4 h-4 bg-primary rounded-full transition-all translate-x-6"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- AI Assistant Settings (Tall Card) -->
+<div class="lg:col-span-4 glass-card rounded-3xl p-8 inner-glow flex flex-col">
+<div class="mb-8">
+<div class="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 mb-6">
+<span class="material-symbols-outlined text-primary">psychology</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg text-primary">AI Assistant</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Customize Kiko Bot's behavior.</p>
+</div>
+<div class="space-y-6 flex-1">
+<div class="space-y-3">
+<p class="font-label-sm text-label-sm text-on-surface-variant/70 uppercase">Personality Mode</p>
+<div class="space-y-2">
+<button class="w-full flex items-center justify-between p-3 rounded-xl border border-white/20 bg-white/10 text-primary">
+<span class="font-body-md text-body-md">Concise &amp; Professional</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</button>
+<button class="w-full flex items-center justify-between p-3 rounded-xl border border-white/5 bg-transparent text-on-surface-variant hover:bg-white/5 transition-colors">
+<span class="font-body-md text-body-md">Creative &amp; Exploratory</span>
+</button>
+</div>
+</div>
+<div class="space-y-3">
+<p class="font-label-sm text-label-sm text-on-surface-variant/70 uppercase">Access Control</p>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">calendar_month</span>
+<span class="font-body-md text-body-md text-on-surface-variant flex-1">Read Calendar</span>
+<div class="w-10 h-5 bg-primary/40 rounded-full p-0.5 border border-primary/50">
+<div class="w-4 h-4 bg-white rounded-full translate-x-4"></div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">mail</span>
+<span class="font-body-md text-body-md text-on-surface-variant flex-1">Summarize Emails</span>
+<div class="w-10 h-5 bg-white/10 rounded-full p-0.5 border border-white/20">
+<div class="w-4 h-4 bg-white/30 rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full mt-8 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all font-body-md text-body-md font-medium">
+                        Advanced AI Config
+                    </button>
+</div>
+<!-- Theme Customization (Full Width Row) -->
+<div class="lg:col-span-12 glass-card rounded-3xl p-8 inner-glow">
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-primary">Theme Customization</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Personalize the look and feel of your Kiko workspace.</p>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-on-surface-variant hover:text-primary transition-all text-label-sm font-label-sm">
+                                Export Config
+                            </button>
+<button class="px-4 py-2 rounded-full bg-primary text-on-primary text-label-sm font-label-sm font-bold shadow-lg active-glow">
+                                Save Changes
+                            </button>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Theme Card 1 -->
+<div class="group cursor-pointer">
+<div class="aspect-video rounded-2xl mb-4 border border-white/20 overflow-hidden relative active-glow ring-2 ring-primary ring-offset-4 ring-offset-background transition-all">
+<div class="absolute inset-0 bg-[#0e0e0e]"></div>
+<div class="absolute top-4 left-4 w-12 h-2 bg-white/20 rounded"></div>
+<div class="absolute top-8 left-4 w-16 h-2 bg-white/10 rounded"></div>
+<div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent backdrop-blur-md border border-white/10 m-3 rounded-lg"></div>
+<div class="absolute bottom-4 right-4 bg-primary px-3 py-1 rounded text-[10px] font-bold text-background uppercase">Active</div>
+</div>
+<h4 class="font-body-md text-body-md text-primary font-bold group-hover:text-primary transition-colors">Obsidian Glass</h4>
+<p class="text-[12px] text-on-surface-variant/60">Ultra-dark, high-contrast, frosted surfaces.</p>
+</div>
+<!-- Theme Card 2 -->
+<div class="group cursor-pointer opacity-60 hover:opacity-100 transition-all">
+<div class="aspect-video rounded-2xl mb-4 border border-white/5 overflow-hidden relative bg-surface-container-high transition-all group-hover:border-white/20">
+<div class="absolute top-4 left-4 w-12 h-2 bg-white/5 rounded"></div>
+<div class="absolute bottom-4 right-4 text-white/20"><span class="material-symbols-outlined">lock</span></div>
+</div>
+<h4 class="font-body-md text-body-md text-on-surface-variant font-medium">Nebula Mist</h4>
+<p class="text-[12px] text-on-surface-variant/60">Soft violets and deep space indigos.</p>
+</div>
+<!-- Theme Card 3 -->
+<div class="group cursor-pointer opacity-60 hover:opacity-100 transition-all">
+<div class="aspect-video rounded-2xl mb-4 border border-white/5 overflow-hidden relative bg-surface-bright transition-all group-hover:border-white/20">
+<div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+</div>
+<h4 class="font-body-md text-body-md text-on-surface-variant font-medium">Titanium</h4>
+<p class="text-[12px] text-on-surface-variant/60">Industrial greys and brushed metal textures.</p>
+</div>
+<!-- Theme Card 4 -->
+<div class="group cursor-pointer opacity-60 hover:opacity-100 transition-all">
+<div class="aspect-video rounded-2xl mb-4 border border-dashed border-white/20 flex items-center justify-center hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-white/30 text-3xl">add</span>
+</div>
+<h4 class="font-body-md text-body-md text-on-surface-variant font-medium">Custom Theme</h4>
+<p class="text-[12px] text-on-surface-variant/60">Define your own palette and blur levels.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Danger Zone -->
+<section class="mt-12 pt-12 border-t border-white/5">
+<div class="glass-card rounded-3xl p-8 border-error/10 bg-error/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-error">Danger Zone</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Irreversible actions concerning your account data.</p>
+</div>
+<div class="flex gap-4">
+<button class="px-6 py-3 rounded-xl border border-error/30 text-error hover:bg-error/10 transition-all font-body-md font-bold">
+                            Deactivate Account
+                        </button>
+<button class="px-6 py-3 rounded-xl bg-error text-on-error hover:opacity-90 transition-all font-body-md font-bold">
+                            Delete Data
+                        </button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Interactive Elements Scripts -->
+<script>
+        // Micro-interaction for Toggles
+        document.querySelectorAll('.w-12.h-6, .w-10.h-5').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const dot = this.querySelector('div');
+                const isSmall = this.classList.contains('h-5');
+                const translateVal = isSmall ? 'translate-x-4' : 'translate-x-6';
+                
+                if (dot.classList.contains(translateVal)) {
+                    dot.classList.remove(translateVal, 'bg-primary');
+                    dot.classList.add('translate-x-0', 'bg-white/30');
+                    this.classList.remove('bg-primary/20', 'bg-primary/40', 'border-primary/30', 'border-primary/50');
+                    this.classList.add('bg-white/10', 'border-white/10');
+                } else {
+                    dot.classList.remove('translate-x-0', 'bg-white/30');
+                    dot.classList.add(translateVal, 'bg-primary');
+                    if (isSmall) {
+                        this.classList.add('bg-primary/40', 'border-primary/50');
+                    } else {
+                        this.classList.add('bg-primary/20', 'border-primary/30');
+                    }
+                    this.classList.remove('bg-white/10', 'border-white/10');
+                }
+            });
+        });
+
+        // Theme Selection Interaction
+        document.querySelectorAll('.aspect-video.rounded-2xl').forEach(card => {
+            card.addEventListener('click', function() {
+                // Clear others
+                document.querySelectorAll('.aspect-video.rounded-2xl').forEach(c => {
+                    c.classList.remove('active-glow', 'ring-2', 'ring-primary', 'ring-offset-4', 'ring-offset-background');
+                });
+                // Activate clicked
+                this.classList.add('active-glow', 'ring-2', 'ring-primary', 'ring-offset-4', 'ring-offset-background');
+            });
+        });
+
+        // Toggle Kiko Bot on Mobile (conceptual for demo)
+        const topBarBrand = document.querySelector('h2');
+        topBarBrand.addEventListener('click', () => {
+            const bot = document.getElementById('kiko-bot');
+            bot.classList.toggle('translate-x-full');
+        });
+    </script>
+</body></html>

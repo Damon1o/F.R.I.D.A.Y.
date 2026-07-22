@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kiko | Task Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error": "#690005",
+                    "tertiary-fixed-dim": "#c8c6c5",
+                    "surface": "#131313",
+                    "outline": "#8e9192",
+                    "on-secondary-fixed": "#1b1c1c",
+                    "secondary-fixed": "#e4e2e1",
+                    "surface-container-high": "#2a2a2a",
+                    "tertiary-fixed": "#e5e2e1",
+                    "on-secondary-container": "#b6b5b4",
+                    "on-surface": "#e5e2e1",
+                    "surface-container": "#201f1f",
+                    "error": "#ffb4ab",
+                    "primary-fixed": "#e2e2e2",
+                    "secondary-container": "#474747",
+                    "on-primary-container": "#636565",
+                    "surface-variant": "#353534",
+                    "surface-container-low": "#1c1b1b",
+                    "secondary-fixed-dim": "#c8c6c6",
+                    "secondary": "#c8c6c6",
+                    "on-secondary": "#303030",
+                    "error-container": "#93000a",
+                    "on-tertiary-fixed": "#1c1b1b",
+                    "outline-variant": "#444748",
+                    "primary-container": "#e2e2e2",
+                    "primary-fixed-dim": "#c6c6c7",
+                    "on-primary-fixed": "#1a1c1c",
+                    "on-secondary-fixed-variant": "#474747",
+                    "on-primary": "#2f3131",
+                    "inverse-surface": "#e5e2e1",
+                    "on-error-container": "#ffdad6",
+                    "surface-dim": "#131313",
+                    "inverse-on-surface": "#313030",
+                    "tertiary": "#ffffff",
+                    "on-tertiary-container": "#656464",
+                    "on-surface-variant": "#c4c7c8",
+                    "tertiary-container": "#e5e2e1",
+                    "surface-container-highest": "#353534",
+                    "surface-bright": "#3a3939",
+                    "surface-tint": "#c6c6c7",
+                    "on-tertiary": "#313030",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-tertiary-fixed-variant": "#474746",
+                    "primary": "#ffffff",
+                    "background": "#131313",
+                    "on-background": "#e5e2e1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-padding": "24px",
+                    "gutter": "16px",
+                    "margin-desktop": "40px",
+                    "unit": "8px",
+                    "margin-mobile": "16px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Hanken Grotesk"],
+                    "label-sm": ["Hanken Grotesk"],
+                    "headline-lg-mobile": ["Hanken Grotesk"],
+                    "display-lg": ["Hanken Grotesk"],
+                    "body-md": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #131313;
+            color: #e5e2e1;
+            font-family: 'Hanken Grotesk', sans-serif;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .inner-glow {
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="flex min-h-screen">
+<!-- SideNavBar (Authority Source: JSON) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container/40 backdrop-blur-2xl border-r border-white/5 flex flex-col py-margin-desktop px-gutter z-50 transition-all duration-200 ease-in-out">
+<div class="flex items-center gap-3 mb-10 px-2">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary leading-none">Kiko</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant opacity-60">Productivity</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active Tab: Tasks -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-primary bg-white/10 rounded-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">checklist</span>
+<span class="font-label-sm text-label-sm">Tasks</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span class="font-label-sm text-label-sm">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">insights</span>
+<span class="font-label-sm text-label-sm">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+</nav>
+<button class="mt-auto w-full bg-primary text-on-primary py-3 rounded-lg font-label-sm text-label-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+            New Task
+        </button>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-64 mr-80 transition-all">
+<!-- TopNavBar (Authority Source: JSON) -->
+<header class="w-full sticky top-0 bg-surface/60 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-margin-desktop h-20 z-40">
+<div class="flex items-center flex-1 max-w-md">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-body-md">search</span>
+<input class="w-full bg-surface-container-lowest/50 border border-white/5 rounded-full py-2 pl-10 pr-4 font-body-md text-body-md focus:outline-none focus:border-white/20 transition-all" placeholder="Search tasks..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:bg-white/5 p-2 rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="hover:bg-white/5 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined">bolt</span>
+</button>
+</div>
+<div class="h-8 w-px bg-white/10 mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="text-right hidden xl:block">
+<p class="font-label-sm text-label-sm text-on-surface font-bold">Alex Chen</p>
+<p class="text-[10px] text-on-surface-variant opacity-60">Pro Plan</p>
+</div>
+<img class="w-10 h-10 rounded-full border border-white/10 object-cover" data-alt="A professional studio headshot of a young creative professional with a neutral expression, clean lighting, and a minimalist aesthetic. The background is a soft, dark gray gradient to match the monotone design system. High resolution, 8k quality, cinematic depth." src="https://lh3.googleusercontent.com/aida-public/AB6AXuApTvIiAQ-cgzY7YxHnj-zMJFKF7ktT7jciRDWrsfKIMMHD9RLh_uauUm_8r25GefMU7R0ayY3xFLDrm_zowBhE03lwR2GSXr1zCrewRA34jUETEPzcrq1np5ECq02X7aILH4DnQxf8LH9yUPpdWPeEmiJnro5hfKz3XJZ_w9Di9z0s31d198uidmO98jMTE2EB0kdwMlNWSQ52oSmsjR3lOGevsNnHDjMmNklRGpBn5qaYfn_K6QDf"/>
+</div>
+</div>
+</header>
+<!-- Task Content -->
+<div class="p-margin-desktop space-y-10">
+<!-- Welcome / Header Section -->
+<section class="flex justify-between items-end">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary">Master List</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">You have 12 tasks pending for today.</p>
+</div>
+<div class="flex gap-2">
+<button class="glass-panel inner-glow px-4 py-2 rounded-lg font-label-sm text-label-sm flex items-center gap-2 hover:bg-white/10 transition-all">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                        Filter
+                    </button>
+<button class="glass-panel inner-glow px-4 py-2 rounded-lg font-label-sm text-label-sm flex items-center gap-2 hover:bg-white/10 transition-all">
+<span class="material-symbols-outlined text-sm">sort</span>
+                        Sort
+                    </button>
+</div>
+</section>
+<!-- Progress Bento Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Work Milestone -->
+<div class="glass-panel inner-glow p-6 rounded-xl flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">apartment</span>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant opacity-40">WORK</span>
+</div>
+<div>
+<h3 class="font-label-sm text-label-sm text-on-surface font-bold">Q4 Strategy Deck</h3>
+<div class="w-full h-1.5 bg-white/5 rounded-full mt-4 overflow-hidden">
+<div class="h-full bg-primary w-[75%] rounded-full"></div>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-2">75% Complete • Due in 2 days</p>
+</div>
+</div>
+<!-- Personal Milestone -->
+<div class="glass-panel inner-glow p-6 rounded-xl flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">person</span>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant opacity-40">PERSONAL</span>
+</div>
+<div>
+<h3 class="font-label-sm text-label-sm text-on-surface font-bold">Fitness Goals</h3>
+<div class="w-full h-1.5 bg-white/5 rounded-full mt-4 overflow-hidden">
+<div class="h-full bg-primary w-[40%] rounded-full"></div>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-2">40% Complete • Monthly track</p>
+</div>
+</div>
+<!-- Ideas Milestone -->
+<div class="glass-panel inner-glow p-6 rounded-xl flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">lightbulb</span>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant opacity-40">IDEAS</span>
+</div>
+<div>
+<h3 class="font-label-sm text-label-sm text-on-surface font-bold">Side Project Launch</h3>
+<div class="w-full h-1.5 bg-white/5 rounded-full mt-4 overflow-hidden">
+<div class="h-full bg-primary w-[15%] rounded-full"></div>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-2">15% Complete • Exploration phase</p>
+</div>
+</div>
+</section>
+<!-- Task List Area -->
+<section class="space-y-6 pb-20">
+<!-- Quick Add -->
+<div class="glass-panel inner-glow p-4 rounded-xl flex items-center gap-4 focus-within:border-white/30 transition-all">
+<span class="material-symbols-outlined text-primary">add_circle</span>
+<input class="flex-1 bg-transparent border-none focus:ring-0 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40" placeholder="Add a quick task to 'Personal'..." type="text"/>
+<div class="flex gap-2">
+<kbd class="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px] text-on-surface-variant">⌘</kbd>
+<kbd class="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px] text-on-surface-variant">Enter</kbd>
+</div>
+</div>
+<!-- Categorized Tasks -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Work Column -->
+<div class="space-y-4">
+<div class="flex items-center justify-between px-2">
+<h4 class="font-label-sm text-label-sm text-on-surface font-bold tracking-widest uppercase flex items-center gap-2">
+<span class="w-1 h-4 bg-primary rounded-full"></span>
+                                Work
+                            </h4>
+<span class="text-[11px] text-on-surface-variant">5 Tasks</span>
+</div>
+<div class="space-y-2">
+<!-- Task Item -->
+<div class="glass-panel p-4 rounded-xl flex items-center justify-between group hover:bg-white/[0.07] transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<button class="w-5 h-5 rounded-md border border-white/20 flex items-center justify-center hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-sm hidden group-hover:block text-primary">check</span>
+</button>
+<span class="font-body-md text-body-md text-on-surface">Review design system documentation</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-on-surface-variant uppercase">Urgent</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm opacity-0 group-hover:opacity-100 transition-opacity">more_vert</span>
+</div>
+</div>
+<!-- Task Item -->
+<div class="glass-panel p-4 rounded-xl flex items-center justify-between group hover:bg-white/[0.07] transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<button class="w-5 h-5 rounded-md border-primary bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-on-primary" style="font-variation-settings: 'FILL' 1;">check</span>
+</button>
+<span class="font-body-md text-body-md text-on-surface-variant line-through">Draft project proposal</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm opacity-40">more_vert</span>
+</div>
+</div>
+</div>
+<!-- Personal Column -->
+<div class="space-y-4">
+<div class="flex items-center justify-between px-2">
+<h4 class="font-label-sm text-label-sm text-on-surface font-bold tracking-widest uppercase flex items-center gap-2">
+<span class="w-1 h-4 bg-primary rounded-full opacity-50"></span>
+                                Personal
+                            </h4>
+<span class="text-[11px] text-on-surface-variant">3 Tasks</span>
+</div>
+<div class="space-y-2">
+<div class="glass-panel p-4 rounded-xl flex items-center justify-between group hover:bg-white/[0.07] transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<button class="w-5 h-5 rounded-md border border-white/20 flex items-center justify-center hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-sm hidden group-hover:block text-primary">check</span>
+</button>
+<span class="font-body-md text-body-md text-on-surface">Weekly grocery shopping</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm opacity-0 group-hover:opacity-100 transition-opacity">more_vert</span>
+</div>
+<div class="glass-panel p-4 rounded-xl flex items-center justify-between group hover:bg-white/[0.07] transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<button class="w-5 h-5 rounded-md border border-white/20 flex items-center justify-center hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-sm hidden group-hover:block text-primary">check</span>
+</button>
+<span class="font-body-md text-body-md text-on-surface">Book dentist appointment</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm opacity-0 group-hover:opacity-100 transition-opacity">more_vert</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Ideas Row (Asymmetric Layout) -->
+<div class="space-y-4">
+<div class="flex items-center justify-between px-2">
+<h4 class="font-label-sm text-label-sm text-on-surface font-bold tracking-widest uppercase flex items-center gap-2">
+<span class="w-1 h-4 bg-primary rounded-full opacity-30"></span>
+                            Ideas
+                        </h4>
+<span class="text-[11px] text-on-surface-variant">4 Tasks</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+<div class="glass-panel p-6 rounded-xl border-dashed border-white/20 hover:border-white/40 transition-all cursor-pointer flex flex-col gap-4">
+<span class="material-symbols-outlined text-on-surface-variant">auto_awesome</span>
+<p class="font-body-md text-body-md text-on-surface">AI-driven task prioritization feature concept</p>
+</div>
+<div class="glass-panel p-6 rounded-xl border-dashed border-white/20 hover:border-white/40 transition-all cursor-pointer flex flex-col gap-4">
+<span class="material-symbols-outlined text-on-surface-variant">brush</span>
+<p class="font-body-md text-body-md text-on-surface">Redesign portfolio home section</p>
+</div>
+<div class="glass-panel p-6 rounded-xl border-dashed border-white/20 hover:border-white/40 transition-all cursor-pointer flex flex-col gap-4">
+<span class="material-symbols-outlined text-on-surface-variant">travel_explore</span>
+<p class="font-body-md text-body-md text-on-surface">Research sustainable living vlog series</p>
+</div>
+<div class="glass-panel p-6 rounded-xl border-dashed border-white/20 hover:border-white/40 transition-all cursor-pointer flex flex-col gap-4">
+<span class="material-symbols-outlined text-on-surface-variant">podcasts</span>
+<p class="font-body-md text-body-md text-on-surface">Tech-minimalist podcast guest list</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- NavigationDrawer / Kiko Bot (Authority Source: JSON) -->
+<aside class="h-screen w-80 fixed right-0 top-0 bg-surface-container-high/30 backdrop-blur-3xl border-l border-white/10 flex flex-col z-50 transition-transform duration-300">
+<div class="p-6 border-b border-white/10">
+<div class="flex items-center gap-4 mb-2">
+<div class="w-10 h-10 rounded-full glass-panel inner-glow flex items-center justify-center border-primary/20">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div>
+<h2 class="font-headline-lg text-[20px] text-primary">Kiko Bot</h2>
+<p class="font-body-md text-label-sm text-on-surface-variant opacity-60">AI Assistant</p>
+</div>
+</div>
+</div>
+<!-- Chat History -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+<div class="space-y-4">
+<!-- Bot Message -->
+<div class="flex flex-col gap-2 max-w-[90%]">
+<div class="glass-panel p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl text-body-md font-body-md">
+                        Good morning, Alex. I've analyzed your workload for today.
+                    </div>
+<span class="text-[10px] text-on-surface-variant ml-1">09:00 AM</span>
+</div>
+<!-- Bot Message -->
+<div class="flex flex-col gap-2 max-w-[90%]">
+<div class="glass-panel p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl text-body-md font-body-md">
+                        The <span class="text-primary font-bold">Strategy Deck</span> is due soon. Should I block out 2 hours for focused work?
+                    </div>
+</div>
+<!-- User Message -->
+<div class="flex flex-col gap-2 items-end">
+<div class="bg-primary text-on-primary p-3 rounded-tl-xl rounded-bl-xl rounded-br-xl text-body-md font-body-md">
+                        Yes, please. Move 'Grocery shopping' to 6 PM.
+                    </div>
+<span class="text-[10px] text-on-surface-variant mr-1">09:12 AM</span>
+</div>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-6 bg-surface-container-highest/20 border-t border-white/10">
+<div class="relative">
+<textarea class="w-full bg-surface-container-lowest/50 border border-white/5 rounded-xl p-3 pr-10 font-body-md text-body-md focus:outline-none focus:border-white/20 resize-none" placeholder="Ask Kiko Bot..." rows="2"></textarea>
+<button class="absolute right-3 bottom-3 text-primary hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+<div class="flex gap-2 mt-4">
+<button class="text-[10px] border border-white/10 px-2 py-1 rounded hover:bg-white/5 transition-all text-on-surface-variant">Summarize today</button>
+<button class="text-[10px] border border-white/10 px-2 py-1 rounded hover:bg-white/5 transition-all text-on-surface-variant">Reschedule tasks</button>
+</div>
+</div>
+</aside>
+<!-- Visual Polish: Ambient Blur Background -->
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary opacity-5 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary opacity-5 blur-[120px] rounded-full"></div>
+</div>
+<script>
+        // Micro-interaction for task checking
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (this.querySelector('.material-symbols-outlined')?.textContent === 'check') {
+                    // Simple toggle logic for demo
+                    const isChecked = this.classList.contains('bg-primary');
+                    if (isChecked) {
+                        this.classList.remove('bg-primary');
+                        this.classList.add('border-white/20');
+                        this.querySelector('span').classList.add('hidden');
+                        this.closest('.glass-panel').querySelector('span.font-body-md').classList.remove('line-through', 'text-on-surface-variant');
+                        this.closest('.glass-panel').querySelector('span.font-body-md').classList.add('text-on-surface');
+                    } else {
+                        this.classList.add('bg-primary');
+                        this.classList.remove('border-white/20');
+                        this.querySelector('span').classList.remove('hidden');
+                        this.closest('.glass-panel').querySelector('span.font-body-md').classList.add('line-through', 'text-on-surface-variant');
+                        this.closest('.glass-panel').querySelector('span.font-body-md').classList.remove('text-on-surface');
+                    }
+                }
+            });
+        });
+    </script>
+</body></html>
