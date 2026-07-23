@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard · Kiko{% endblock %}
+{% block topbar %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1 class="display">Hello.</h1>
+  <p class="subtle">{{ today.strftime('%A, %B %d') }}</p>
+</section>
+
+<section class="stat-row">
+  <div class="stat glass">
+    <span class="stat-num">{{ stats.events }}</span>
+    <span class="stat-label">Today's events</span>
+  </div>
+  <div class="stat glass">
+    <span class="stat-num">{{ stats.open }}</span>
+    <span class="stat-label">Open tasks</span>
+  </div>
+  <div class="stat glass">
+    <span class="stat-num">{{ stats.overdue }}</span>
+    <span class="stat-label">Overdue</span>
+  </div>
+</section>
+
+<div class="bento">
+  {# ---- Today's events ---- #}
+  <section class="card glass" aria-labelledby="events-h">
+    <div class="card-head">
+      <h3 id="events-h">{{ icon('calendar', 18) }} Today's events</h3>
+    </div>
+    <ul class="agenda" id="events-list">
+      {% for e in events %}
+      <li>
+        <span class="agenda-time">{{ 'All day' if e.all_day else e.start_at[11:16] }}</span>
+        <span class="agenda-title">{{ e.title }}</span>
+      </li>
+      {% else %}
+      <li class="empty">Nothing scheduled today.</li>
+      {% endfor %}
+    </ul>
+    <form class="quick-add" data-quick="event">
+      <input name="title" placeholder="Quick add event" required>
+      <input name="start_at" type="datetime-local" required aria-label="Start time">
+      <button class="btn-primary" type="submit">{{ icon('plus', 18) }}</button>
+    </form>
+  </section>
+
+  {# ---- Open tasks ---- #}
+  <section class="card glass" aria-labelledby="tasks-h">
+    <div class="card-head">
+      <h3 id="tasks-h">{{ icon('list-todo', 18) }} Open tasks</h3>
+    </div>
+    <ul class="task-list" id="todos-list">
+      {% for t in todos %}
+      <li data-id="{{ t.id }}">
+        <button class="check" data-check aria-label="Complete">{{ icon('check', 16) }}</button>
+        <span class="task-title">{{ t.title }}</span>
+        {% if t.due_at %}<span class="task-due">{{ t.due_at[:10] }}</span>{% endif %}
+      </li>
+      {% else %}
+      <li class="empty">No open tasks. Nice.</li>
+      {% endfor %}
+    </ul>
+    <form class="quick-add" data-quick="todo">
+      <input name="title" placeholder="Quick add task" required>
+      <button class="btn-primary" type="submit">{{ icon('plus', 18) }}</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

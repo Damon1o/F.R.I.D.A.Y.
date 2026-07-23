@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Local data & secrets
+kiko.db
+.env
+
+# Tooling
+.playwright-mcp/

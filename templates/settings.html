@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Settings · Kiko{% endblock %}
+{% block topbar %}Settings{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="display">Settings</h1>
+    <p class="subtle">Preferences for your local Kiko. Nothing here persists yet.</p>
+  </div>
+</section>
+
+<section class="card glass settings-group">
+  <h3>{{ icon('settings', 18) }} Appearance</h3>
+  <div class="setting-row">
+    <div>
+      <strong>Theme</strong>
+      <p class="subtle">Switch between dark and light. Uses the topbar toggle; remembered per browser.</p>
+    </div>
+    <button class="btn-primary" type="button" id="settings-theme">Toggle theme</button>
+  </div>
+</section>
+
+<section class="card glass settings-group">
+  <h3>Profile</h3>
+  <label class="field">Display name <input placeholder="You" disabled></label>
+  <label class="field">Timezone <input value="Local (browser)" disabled></label>
+  <p class="subtle">Profile editing arrives with the assistant phases.</p>
+</section>
+
+<section class="card glass settings-group">
+  <h3>About</h3>
+  <div class="setting-row">
+    <div><strong>Kiko</strong><p class="subtle">Phase 1 (Core) — manual productivity, no AI yet.</p></div>
+    <span class="pill">v0.1</span>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('settings-theme')?.addEventListener('click', () => {
+    document.getElementById('theme-toggle')?.click();
+  });
+</script>
+{% endblock %}

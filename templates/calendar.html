@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Calendar · Kiko{% endblock %}
+{% block topbar %}Calendar{% endblock %}
+
+{% block content %}
+<section class="page-head cal-head">
+  <div class="cal-nav">
+    <button class="icon-btn" id="cal-prev" aria-label="Previous month">{{ icon('chevron-left', 20) }}</button>
+    <h1 class="display" id="cal-label">Month</h1>
+    <button class="icon-btn" id="cal-next" aria-label="Next month">{{ icon('chevron-right', 20) }}</button>
+  </div>
+  <button class="btn-primary" id="cal-today" type="button">Today</button>
+</section>
+
+<section class="card glass">
+  <div class="cal-weekdays">
+    {% for d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}<span>{{ d }}</span>{% endfor %}
+  </div>
+  <div class="cal-grid" id="cal-grid"><!-- days rendered by calendar.js --></div>
+</section>
+
+{# ---- Event modal (add/edit) ---- #}
+<div class="modal-backdrop" id="event-modal" hidden>
+  <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="card-head">
+      <h3 id="modal-title">New event</h3>
+      <button class="icon-btn" id="modal-close" aria-label="Close">{{ icon('x', 18) }}</button>
+    </div>
+    <form id="event-form" class="stack">
+      <input type="hidden" name="id">
+      <label>Title <input name="title" required autocomplete="off"></label>
+      <label>Start <input name="start_at" type="datetime-local" required></label>
+      <label>End <input name="end_at" type="datetime-local"></label>
+      <label>Location <input name="location" autocomplete="off"></label>
+      <label>Notes <textarea name="notes" rows="2"></textarea></label>
+      <div class="modal-actions">
+        <button type="button" class="icon-btn danger" id="event-delete" hidden>{{ icon('trash-2', 16) }} Delete</button>
+        <button type="submit" class="btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+{% endblock %}

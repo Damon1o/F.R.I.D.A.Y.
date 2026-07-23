@@ -1,0 +1,19 @@
+{# Always-on Kiko assistant panel. Inert placeholder in Phase 1; wired in Phase 2. #}
+<aside class="kiko glass" aria-label="Kiko assistant">
+  <div class="kiko-head">
+    <span class="kiko-orb">{{ icon('mic', 20) }}</span>
+    <div class="kiko-title">
+      <strong>Kiko Bot</strong>
+      <small>AI Assistant</small>
+    </div>
+  </div>
+  <div class="kiko-body">
+    <p class="kiko-note">
+      Voice and chat arrive in Phase 2. For now, add events and tasks directly on each page.
+    </p>
+  </div>
+  <form class="kiko-input" onsubmit="return false" aria-disabled="true">
+    <input type="text" placeholder="Ask Kiko (coming soon)" disabled>
+    <button class="icon-btn" type="button" disabled aria-label="Send">{{ icon('chevron-right', 18) }}</button>
+  </form>
+</aside>

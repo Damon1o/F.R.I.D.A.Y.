@@ -1,0 +1,57 @@
+"""Kiko — Flask app factory. Server-rendered Jinja + stdlib sqlite3, no build step."""
+import re
+from functools import lru_cache
+from pathlib import Path
+
+from flask import Flask
+from markupsafe import Markup
+
+from config import Config
+from core import db
+
+LUCIDE_DIR = Path(__file__).resolve().parent / "static" / "vendor" / "lucide"
+
+
+@lru_cache(maxsize=64)
+def _load_icon(name: str) -> str:
+    svg = (LUCIDE_DIR / f"{name}.svg").read_text(encoding="utf-8")
+    svg = re.sub(r"<!--.*?-->", "", svg, flags=re.S)  # drop license comment
+    return svg.strip()
+
+
+def render_icon(name: str, size: int = 20, cls: str = "") -> Markup:
+    """Inline a self-hosted Lucide SVG. Icons only, never emoji."""
+    svg = _load_icon(name)
+    svg = re.sub(r'\bwidth="24"', f'width="{size}"', svg, count=1)
+    svg = re.sub(r'\bheight="24"', f'height="{size}"', svg, count=1)
+    new_cls = ("icon " + cls).strip()
+    if 'class="' in svg:
+        svg = re.sub(r'class="[^"]*"', f'class="{new_cls}"', svg, count=1)
+    else:
+        svg = svg.replace("<svg", f'<svg class="{new_cls}"', 1)
+    return Markup(svg)
+
+
+def create_app(config_overrides: dict | None = None) -> Flask:
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    if config_overrides:
+        app.config.update(config_overrides)
+
+    db.init_app(app)
+    app.jinja_env.globals["icon"] = render_icon
+
+    from pages.dashboard.routes import dashboard_bp
+    from pages.calendar.routes import calendar_bp
+    from pages.todos.routes import todos_bp
+    from pages.settings.routes import settings_bp
+
+    for bp in (dashboard_bp, calendar_bp, todos_bp, settings_bp):
+        app.register_blueprint(bp)
+
+    return app
+
+
+if __name__ == "__main__":
+    application = create_app()
+    application.run(host=Config.HOST, port=Config.PORT, debug=True)
