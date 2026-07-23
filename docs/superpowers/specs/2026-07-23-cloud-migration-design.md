@@ -128,7 +128,7 @@ is compatible; any positional `row[0]` access must be audited and keyed.
 
 ### 4.3 SQL in models
 
-Two mechanical changes across `pages/*/models.py` and `pages/kiko/messages.py`:
+Two mechanical changes across `pages/*/models.py` and `pages/friday/messages.py`:
 
 1. **Placeholders:** SQLite `?` → psycopg `%s` in every SQL string. This is the
    widest-reaching edit; it is purely mechanical.
@@ -175,7 +175,7 @@ Tests run against **real Postgres** so they exercise the production dialect
 ## 8. What stays exactly the same
 
 Routes, Jinja templates, static assets/design system, the DeepSeek agent loop
-(`pages/kiko/agent.py`), tools, and all request/response contracts. A user
+(`pages/friday/agent.py`), tools, and all request/response contracts. A user
 hitting the deployed app sees identical behavior; only the host and database
 change.
 

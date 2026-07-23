@@ -3,7 +3,7 @@ import json
 
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
-from pages.kiko import agent, messages
+from pages.friday import agent, messages
 
 friday_bp = Blueprint("friday", __name__)
 

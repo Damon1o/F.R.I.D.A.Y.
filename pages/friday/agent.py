@@ -2,8 +2,8 @@
 import json
 
 from core.llm import DeepSeekClient, LLMError
-from pages.kiko import messages
-from pages.kiko.tools import TOOLS, dispatch
+from pages.friday import messages
+from pages.friday.tools import TOOLS, dispatch
 
 MAX_STEPS = 6  # guard against a runaway tool loop
 

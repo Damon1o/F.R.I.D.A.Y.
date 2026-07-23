@@ -90,7 +90,8 @@
       .then(r => r.json())
       .then(data => {
         const val = data[prefKey];
-        render(val !== undefined ? val : defaultOn);
+        const boolVal = val === 'true';
+        render(val !== undefined ? boolVal : defaultOn);
       })
       .catch(() => render(defaultOn));
 

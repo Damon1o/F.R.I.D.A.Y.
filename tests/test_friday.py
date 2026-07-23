@@ -4,8 +4,8 @@ import json
 import pytest
 
 from core.llm import LLMError
-from pages.kiko import agent, messages
-from pages.kiko.tools import dispatch
+from pages.friday import agent, messages
+from pages.friday.tools import dispatch
 from pages.todos import models as todos
 
 
