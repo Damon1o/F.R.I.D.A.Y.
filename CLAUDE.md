@@ -16,9 +16,10 @@
   component CSS.
 
 ## Stack
-Flask app-factory + server-rendered Jinja + vanilla JS `fetch`, SQLite via stdlib
-`sqlite3`. No build step, no SPA. Single user, binds `127.0.0.1`. See
-`docs/superpowers/specs/2026-07-21-phase1-core-design.md`.
+Flask app-factory + server-rendered Jinja + vanilla JS `fetch`, Postgres (Neon)
+via psycopg 3. Deployed on Vercel serverless (`api/index.py` WSGI entrypoint);
+secrets via Vercel env. No build step, no SPA. Single user. See
+`docs/superpowers/specs/2026-07-23-cloud-migration-design.md`.
 
 ## Clarification
 - Feel free to ask questions if unsure about any task, requirement, or implementation detail.
