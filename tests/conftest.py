@@ -12,7 +12,8 @@ TEST_DB_URL = os.environ.get(
 @pytest.fixture
 def app():
     # Real Postgres. Empty API key so the LLM is never reached, regardless of the dev's .env.
-    app = create_app({"DATABASE_URL": TEST_DB_URL, "TESTING": True, "DEEPSEEK_API_KEY": ""})
+    app = create_app({"DATABASE_URL": TEST_DB_URL, "TESTING": True,
+                      "DEEPSEEK_API_KEY": "", "VOICE_TOKEN": "testsecret"})
     # Fresh state per test: create_app already ran init_db (CREATE IF NOT EXISTS); wipe rows + reset ids.
     with app.app_context():
         from core import db
