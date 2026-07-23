@@ -4,12 +4,13 @@
 
 {% block content %}
 <section class="hero">
-  <h1 class="display">Hello.</h1>
+  <h1 class="display">Overview</h1>
   <p class="subtle">{{ today.strftime('%A, %B %d') }}</p>
 </section>
 
-<section class="stat-row">
-  <div class="stat glass">
+{# ---- Stat tiles (display only) ---- #}
+<section class="stat-row four">
+  <div class="stat glass is-lead">
     <span class="stat-num">{{ stats.events }}</span>
     <span class="stat-label">Today's events</span>
   </div>
@@ -21,55 +22,71 @@
     <span class="stat-num">{{ stats.overdue }}</span>
     <span class="stat-label">Overdue</span>
   </div>
+  <div class="stat glass">
+    <span class="stat-num">{{ stats.completed }}</span>
+    <span class="stat-label">Done this week</span>
+  </div>
+</section>
+
+{# ---- This week: schedule load bars + breakdown ---- #}
+<section class="card glass" aria-labelledby="week-h">
+  <div class="card-head">
+    <h3 id="week-h">{{ icon('calendar', 18) }} This week</h3>
+    <span class="tag">Mon–Sun</span>
+  </div>
+  <div class="week-split">
+    <ul class="bars" aria-label="Events per day this week">
+      {% for label, bar, count in week %}
+      <li>
+        <span class="bar-track"><span class="bar-fill" style="height: {{ bar.pct }}%"></span></span>
+        <span class="bar-val">{{ count }}</span>
+        <span class="bar-lab">{{ label }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <ul class="breakdown" aria-label="Task breakdown">
+      {% for label, count in breakdown %}
+      <li><span class="bd-lab">{{ label }}</span><span class="bd-val">{{ count }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
 </section>
 
 <div class="bento">
-  {# ---- Today's events ---- #}
-  <section class="card glass" aria-labelledby="events-h">
+  {# ---- Activity sparkline ---- #}
+  <section class="card glass" aria-labelledby="act-h">
     <div class="card-head">
-      <h3 id="events-h">{{ icon('calendar', 18) }} Today's events</h3>
+      <h3 id="act-h">{{ icon('trending-up', 18) }} Activity</h3>
+      <span class="tag">Tasks done · 7d</span>
     </div>
-    <ul class="agenda" id="events-list">
-      {% for e in events %}
+    <div class="spark">
+      <svg viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="Tasks completed, last 7 days">
+        <polyline class="spark-line" points="{{ spark }}" />
+      </svg>
+      <ul class="spark-axis">
+        {% for label, count in spark_days %}
+        <li><span class="sa-val">{{ count }}</span><span class="sa-lab">{{ label }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  {# ---- Upcoming events ---- #}
+  <section class="card glass" aria-labelledby="up-h">
+    <div class="card-head">
+      <h3 id="up-h">{{ icon('list-todo', 18) }} Upcoming</h3>
+      <a class="tag" href="{{ url_for('calendar.calendar_page') }}">View calendar</a>
+    </div>
+    <ul class="agenda">
+      {% for e in upcoming %}
       <li>
-        <span class="agenda-time">{{ 'All day' if e.all_day else e.start_at[11:16] }}</span>
+        <span class="agenda-time">{{ 'All day' if e.all_day else e.start_at[5:16].replace('T', ' ') }}</span>
         <span class="agenda-title">{{ e.title }}</span>
       </li>
       {% else %}
-      <li class="empty">Nothing scheduled today.</li>
+      <li class="empty">Nothing coming up.</li>
       {% endfor %}
     </ul>
-    <form class="quick-add" data-quick="event">
-      <input name="title" placeholder="Quick add event" required>
-      <input name="start_at" type="datetime-local" required aria-label="Start time">
-      <button class="btn-primary" type="submit">{{ icon('plus', 18) }}</button>
-    </form>
-  </section>
-
-  {# ---- Open tasks ---- #}
-  <section class="card glass" aria-labelledby="tasks-h">
-    <div class="card-head">
-      <h3 id="tasks-h">{{ icon('list-todo', 18) }} Open tasks</h3>
-    </div>
-    <ul class="task-list" id="todos-list">
-      {% for t in todos %}
-      <li data-id="{{ t.id }}">
-        <button class="check" data-check aria-label="Complete">{{ icon('check', 16) }}</button>
-        <span class="task-title">{{ t.title }}</span>
-        {% if t.due_at %}<span class="task-due">{{ t.due_at[:10] }}</span>{% endif %}
-      </li>
-      {% else %}
-      <li class="empty">No open tasks. Nice.</li>
-      {% endfor %}
-    </ul>
-    <form class="quick-add" data-quick="todo">
-      <input name="title" placeholder="Quick add task" required>
-      <button class="btn-primary" type="submit">{{ icon('plus', 18) }}</button>
-    </form>
   </section>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

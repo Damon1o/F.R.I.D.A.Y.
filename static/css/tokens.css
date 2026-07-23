@@ -10,6 +10,14 @@
   src: url('../vendor/fonts/hanken-grotesk.woff2') format('woff2');
 }
 
+@font-face {
+  font-family: 'Zarathustra';        /* display face — headers & titles only */
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/zarathustra-v01.otf') format('opentype');
+}
+
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -71,4 +79,5 @@
   --kiko-w: 320px;
   --topbar-h: 68px;
   --font-sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Zarathustra', 'Hanken Grotesk', system-ui, sans-serif;
 }
