@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "design-motion-principles": {
+      "source": "kylezantos/design-motion-principles",
+      "sourceType": "github",
+      "skillPath": "skills/design-motion-principles/SKILL.md",
+      "computedHash": "ca263e4515ddd34e412c841a2b35c2898a2a2122744836fdd003f0a2552192d6"
+    },
+    "web-audio-api": {
+      "source": "martinholovsky/claude-skills-generator",
+      "sourceType": "github",
+      "skillPath": "skills/web-audio-api/SKILL.md",
+      "computedHash": "5547d3ef64fecb0d0740e16ffe18c0b3379708ef4c4cf016efc0cf50e19cf3e5"
+    }
+  }
+}
