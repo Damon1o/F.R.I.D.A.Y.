@@ -1,4 +1,4 @@
-/* Kiko design tokens — sourced from the Stitch "Glassmorphic AI Productivity Suite"
+/* F.R.I.D.A.Y. design tokens — sourced from the Stitch "Glassmorphic AI Productivity Suite"
    export (docs/design/stitch/). Monochrome, Material-3 semantic naming. Self-hosted;
    no external CDN. Components reference these vars only — no hex literals downstream. */
 
@@ -7,7 +7,7 @@
   font-style: normal;
   font-weight: 100 900;              /* variable font, one file */
   font-display: swap;
-  src: url('../vendor/fonts/hanken-grotesk.woff2') format('woff2');
+  src: url('../fonts/hanken-grotesk.woff2') format('woff2');
 }
 
 @font-face {
@@ -75,8 +75,9 @@
   --text-body: 0.95rem;
   --text-label: 0.8rem;
   /* layout */
-  --rail-w: 240px;
-  --kiko-w: 320px;
+--rail-w: 240px;
+  --rail-w-collapsed: 84px;
+  --friday-w: 320px;
   --topbar-h: 68px;
   --font-sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: 'Zarathustra', 'Hanken Grotesk', system-ui, sans-serif;

@@ -1,32 +1,38 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Kiko{% endblock %}</title>
+  <title>{% block title %}F.R.I.D.A.Y.{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
+
 <body>
   <div class="app-shell">
     {# ---- Left rail: nav ---- #}
-    <aside class="rail glass" aria-label="Primary navigation">
+    <aside class="rail glass" id="nav-rail" aria-label="Primary navigation">
       <div class="rail-brand">
-        <span class="brand-mark">{{ icon('circle-check-big', 22) }}</span>
-        <span class="brand-text">Kiko<small>Productivity</small></span>
+        <span class="brand-mark">
+          {{ logo() }}
+        </span>
+        <span class="brand-text">F.R.I.D.A.Y.<small>Productivity</small></span>
       </div>
       <nav class="nav">
         {% set page = request.endpoint %}
         <a class="nav-link {{ 'is-active' if page == 'dashboard.index' }}" href="{{ url_for('dashboard.index') }}">
           {{ icon('layout-dashboard') }}<span>Dashboard</span>
         </a>
-        <a class="nav-link {{ 'is-active' if page == 'calendar.calendar_page' }}" href="{{ url_for('calendar.calendar_page') }}">
+        <a class="nav-link {{ 'is-active' if page == 'calendar.calendar_page' }}"
+          href="{{ url_for('calendar.calendar_page') }}">
           {{ icon('calendar') }}<span>Calendar</span>
         </a>
         <a class="nav-link {{ 'is-active' if page == 'todos.todos_page' }}" href="{{ url_for('todos.todos_page') }}">
           {{ icon('list-todo') }}<span>Tasks</span>
         </a>
-        <a class="nav-link {{ 'is-active' if page == 'settings.settings_page' }}" href="{{ url_for('settings.settings_page') }}">
+        <a class="nav-link {{ 'is-active' if page == 'settings.settings_page' }}"
+          href="{{ url_for('settings.settings_page') }}">
           {{ icon('settings') }}<span>Settings</span>
         </a>
       </nav>
@@ -37,22 +43,29 @@
       <header class="topbar glass">
         <div class="topbar-title">{% block topbar %}{% endblock %}</div>
         <div class="topbar-actions">
-          <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle theme">
-            {{ icon('circle-check-big', 18) }}
+          <button class="icon-btn" id="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="true">
+            {{ icon('layout-dashboard', 18) }}
           </button>
-        </div>
-      </header>
+<button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle theme">
+        {{ icon('circle-check-big', 18) }}
+      </button>
+      <button class="icon-btn" id="friday-toggle" type="button" aria-label="Hide F.R.I.D.A.Y. panel" aria-expanded="true">
+        {{ icon('chevron-left', 18) }}
+      </button>
+    </div>
+  </header>
       <main class="content">
         {% block content %}{% endblock %}
       </main>
     </div>
 
-    {# ---- Right rail: always-on Kiko panel (inert in Phase 1) ---- #}
-    {% include '_kiko_panel.html' %}
+    {# ---- Right rail: always-on F.R.I.D.A.Y. panel (inert in Phase 1) ---- #}
+    {% include '_friday_panel.html' %}
   </div>
 
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/kiko.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/friday.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>
+
 </html>

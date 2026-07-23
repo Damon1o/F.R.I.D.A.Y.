@@ -5,6 +5,10 @@
 **App:** Kiko — personal voice-driven productivity web app (single user, localhost)
 **Builds on:** `2026-07-21-phase1-core-design.md` (Phase 1 shipped, 22 tests green)
 
+> **2026-07-23 note — rebrand.** "Kiko" is renamed **F.R.I.D.A.Y.** app-wide (see
+> Phase 1 spec §12). This doc still says *Kiko*; read it as *F.R.I.D.A.Y.* The panel,
+> endpoints, and DOM ids ship as `friday-*` / `/api/friday/*`.
+
 ## 1. Overview
 
 Phase 2 turns the inert right-column Kiko panel into a working chat that creates,

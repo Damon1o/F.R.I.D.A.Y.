@@ -1,4 +1,4 @@
-# Kiko — project instructions
+# F.R.I.D.A.Y. — project instructions
 
 ## Always
 - **RTK**: route dev/CLI operations through RTK (Rust Token Killer) for token savings.

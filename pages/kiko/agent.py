@@ -12,7 +12,7 @@ def _system() -> dict:
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc).astimezone().isoformat(timespec="minutes")
     return {"role": "system", "content": (
-        "You are Kiko, a concise personal productivity assistant. "
+        "You are F.R.I.D.A.Y., a concise personal productivity assistant. "
         f"The current local datetime is {now}. "
         "Use the tools to create, edit, delete or list the user's events and todos. "
         "Act immediately — do not ask for confirmation. Resolve relative dates "
@@ -59,7 +59,7 @@ def run_turn(user_text: str, client=None):
                 yield "token", {"text": chunk}
             break
         else:
-            yield "error", {"text": "Kiko couldn't finish that in time."}
+            yield "error", {"text": "F.R.I.D.A.Y. couldn't finish that in time."}
     except LLMError as e:
         yield "error", {"text": _llm_error(e)}
     yield "done", {}
@@ -75,5 +75,5 @@ def _status(tool_calls) -> str:
 
 def _llm_error(e: LLMError) -> str:
     if str(e) == "no API key":
-        return "Kiko is unavailable — set DEEPSEEK_API_KEY in your .env."
-    return f"Kiko hit an error: {e}"
+        return "F.R.I.D.A.Y. is unavailable — set DEEPSEEK_API_KEY in your .env."
+    return f"F.R.I.D.A.Y. hit an error: {e}"

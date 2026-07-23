@@ -1,23 +1,54 @@
 {% extends 'base.html' %}
-{% block title %}Settings · Kiko{% endblock %}
+{% block title %}Settings · F.R.I.D.A.Y.{% endblock %}
 {% block topbar %}Settings{% endblock %}
 
 {% block content %}
 <section class="page-head">
   <div>
     <h1 class="display">Settings</h1>
-    <p class="subtle">Preferences for your local Kiko. Nothing here persists yet.</p>
+    <p class="subtle">Preferences for your local F.R.I.D.A.Y.. Stored in local database.</p>
   </div>
 </section>
 
 <section class="card glass settings-group">
-  <h3>{{ icon('settings', 18) }} Appearance</h3>
+  <h3>{{ icon('layout-dashboard', 18) }} Navigation</h3>
+
   <div class="setting-row">
     <div>
-      <strong>Theme</strong>
-      <p class="subtle">Switch between dark and light. Uses the topbar toggle; remembered per browser.</p>
+      <strong>Auto-collapse nav rail</strong>
+      <p class="subtle">When enabled, the left rail collapses to icons only. Hover to expand.</p>
     </div>
-    <button class="btn-primary" type="button" id="settings-theme">Toggle theme</button>
+    <button class="btn-primary toggle-btn" type="button" id="nav-auto-collapse" data-pref="nav_collapsed" aria-pressed="false">
+      <span class="toggle-on">On</span><span class="toggle-off">Off</span>
+    </button>
+  </div>
+
+  <div class="setting-row">
+    <div>
+      <strong>Keyboard shortcut: <kbd>Ctrl/Cmd</kbd>+<kbd>B</kbd></strong>
+      <p class="subtle">Toggle nav rail collapse/expand anytime.</p>
+    </div>
+  </div>
+</section>
+
+<section class="card glass settings-group">
+  <h3>{{ icon('mic', 18) }} F.R.I.D.A.Y. Panel</h3>
+
+  <div class="setting-row">
+    <div>
+      <strong>Show assistant panel</strong>
+      <p class="subtle">When disabled, the right panel hides. Click the arrow button on the topbar to slide it out.</p>
+    </div>
+    <button class="btn-primary toggle-btn" type="button" id="friday-visible" data-pref="friday_visible" aria-pressed="true">
+      <span class="toggle-on">On</span><span class="toggle-off">Off</span>
+    </button>
+  </div>
+
+  <div class="setting-row">
+    <div>
+      <strong>Keyboard shortcut: <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></strong>
+      <p class="subtle">Toggle F.R.I.D.A.Y. panel visibility anytime.</p>
+    </div>
   </div>
 </section>
 
@@ -31,7 +62,7 @@
 <section class="card glass settings-group">
   <h3>About</h3>
   <div class="setting-row">
-    <div><strong>Kiko</strong><p class="subtle">Phase 1 (Core) — manual productivity, no AI yet.</p></div>
+    <div><strong>F.R.I.D.A.Y.</strong><p class="subtle">Phase 1 (Core) — manual productivity, no AI yet.</p></div>
     <span class="pill">v0.1</span>
   </div>
 </section>
@@ -39,6 +70,55 @@
 
 {% block scripts %}
 <script>
+  // Toggle button helper
+  function initToggle(btnId, prefKey, defaultOn, onChange) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    const onLabel = btn.querySelector('.toggle-on');
+    const offLabel = btn.querySelector('.toggle-off');
+    let state = defaultOn;
+
+    function render(on) {
+      state = on;
+      btn.setAttribute('aria-pressed', String(on));
+      onLabel.style.display = on ? '' : 'none';
+      offLabel.style.display = on ? 'none' : '';
+    }
+
+    // Load from server
+    fetch('/api/settings/ui')
+      .then(r => r.json())
+      .then(data => {
+        const val = data[prefKey];
+        render(val !== undefined ? val : defaultOn);
+      })
+      .catch(() => render(defaultOn));
+
+    btn.addEventListener('click', async () => {
+      const next = !state;
+      try {
+        await fetch('/api/settings/ui', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [prefKey]: next }),
+        });
+        render(next);
+        if (onChange) onChange(next);
+      } catch (e) {
+        console.error('Failed to save preference:', e);
+      }
+    });
+  }
+
+  initToggle('nav-auto-collapse', 'nav_collapsed', false, (on) => {
+    // Tell the nav rail to update
+    window.dispatchEvent(new CustomEvent('nav-pref-changed', { detail: { collapsed: on } }));
+  });
+
+  initToggle('friday-visible', 'friday_visible', true, (on) => {
+    window.dispatchEvent(new CustomEvent('friday-pref-changed', { detail: { visible: on } }));
+  });
+
   document.getElementById('settings-theme')?.addEventListener('click', () => {
     document.getElementById('theme-toggle')?.click();
   });

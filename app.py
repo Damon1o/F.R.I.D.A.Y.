@@ -1,4 +1,4 @@
-"""Kiko — Flask app factory. Server-rendered Jinja + stdlib sqlite3, no build step."""
+"""F.R.I.D.A.Y. — Flask app factory. Server-rendered Jinja + stdlib sqlite3, no build step."""
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -10,6 +10,7 @@ from config import Config
 from core import db
 
 LUCIDE_DIR = Path(__file__).resolve().parent / "static" / "vendor" / "lucide"
+LOGO_PATH = Path(__file__).resolve().parent / "static" / "images" / "friday.svg"
 
 
 @lru_cache(maxsize=64)
@@ -32,6 +33,18 @@ def render_icon(name: str, size: int = 20, cls: str = "") -> Markup:
     return Markup(svg)
 
 
+def render_logo(cls: str = "") -> Markup:
+    """Inline F.R.I.D.A.Y. logo SVG so it inherits color from parent."""
+    raw = LOGO_PATH.read_text(encoding="utf-8")
+    raw = re.sub(r"<!--.*?-->", "", raw, flags=re.S)
+    raw = re.sub(r"<\?xml.*?\?>", "", raw, count=1)
+    raw = re.sub(r"<!DOCTYPE.*?>", "", raw, count=1, flags=re.S)
+    raw = raw.strip()
+    new_cls = ("brand-logo " + cls).strip() if cls else "brand-logo"
+    raw = re.sub(r'class="([^"]*)"', f'class="{new_cls} \\1"', raw, count=1) if 'class="' in raw else raw.replace("<svg", f'<svg class="{new_cls}"', 1)
+    return Markup(raw)
+
+
 def create_app(config_overrides: dict | None = None) -> Flask:
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -40,14 +53,15 @@ def create_app(config_overrides: dict | None = None) -> Flask:
 
     db.init_app(app)
     app.jinja_env.globals["icon"] = render_icon
+    app.jinja_env.globals["logo"] = render_logo
 
     from pages.dashboard.routes import dashboard_bp
     from pages.calendar.routes import calendar_bp
     from pages.todos.routes import todos_bp
     from pages.settings.routes import settings_bp
-    from pages.kiko.routes import kiko_bp
+    from pages.kiko.routes import friday_bp
 
-    for bp in (dashboard_bp, calendar_bp, todos_bp, settings_bp, kiko_bp):
+    for bp in (dashboard_bp, calendar_bp, todos_bp, settings_bp, friday_bp):
         app.register_blueprint(bp)
 
     return app

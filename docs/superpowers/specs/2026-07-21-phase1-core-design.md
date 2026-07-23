@@ -8,6 +8,14 @@
 > from the "Glassmorphic AI Productivity Suite" Stitch project export (4 screens:
 > Dashboard, Calendar, Task Manager, Settings) instead of the git-history glassmorphism
 > CSS. See §11. Adds a **Settings** page (`/settings`) beyond the original scope.
+>
+> **2026-07-23 revision — rebrand + shell UX.** The assistant is renamed **Kiko →
+> F.R.I.D.A.Y.** app-wide (titles, right panel, `kiko-*` → `friday-*` CSS/JS/classes,
+> brand text + logo). Settings gains **persisted UI preferences** (new `settings`
+> key/value table + `/api/settings/ui`), a **collapsible nav rail** (icons-only +
+> hover-to-peek, `Ctrl/Cmd+B`), and a **panel visibility toggle** (`Ctrl/Cmd+Shift+F`).
+> This supersedes the "Settings is page-only, no persistence in Phase 1" statements
+> below. See §12. Names in §§1–11 read *Kiko* but now refer to *F.R.I.D.A.Y.*
 
 ## 1. Overview
 
@@ -132,7 +140,7 @@ static/
         todos.css, settings.css, kiko-panel.css
   js/   theme.js, calendar.js, todos.js, dashboard.js
   vendor/lucide/          self-hosted pinned Lucide assets
-  vendor/fonts/           self-hosted Hanken Grotesk @font-face files
+  fonts/                  self-hosted Hanken Grotesk + Zarathustra @font-face files
 templates/
   base.html               3-col shell: left nav + main + right Kiko panel + glass topbar
   _kiko_panel.html        always-on assistant panel partial (inert Phase 1)
@@ -264,9 +272,8 @@ literals in component CSS — everything references a token.
 (`blur-xl`), semi-opaque container backgrounds (`surface-container/40` style alpha),
 hairline borders (`--outline-variant`, `border-white/10` equivalent).
 
-**Typography.** Body/UI font **Hanken Grotesk** (weights 400/500/600/700), self-hosted
-as `@font-face` under `static/vendor/fonts/`. Stitch's `display-lg` / `headline-lg` /
-`title` scales map to `--text-display-lg`, `--text-headline-lg`, etc.
+**Typography.** Body/UI font **Hanken Grotesk** (weights 100–900 variable), display **Zarathustra**, both self-hosted
+as `@font-face` under `static/fonts/`.
 
 **Icons.** Stitch uses **Material Symbols Outlined** (a CDN font — banned). Each glyph
 maps to a self-hosted **Lucide** icon rendered through the existing `icons.html` macro.
@@ -288,3 +295,63 @@ rendered HTML.
 
 **Reference assets.** Exported PNG + HTML per screen live at
 `docs/design/stitch/` (copied from the download) for implementation reference.
+
+## 12. Added features (2026-07-23)
+
+Shipped after the original Phase 1 scope. All are single-user, localhost, no-CDN.
+
+### 12.1 Rebrand: Kiko → F.R.I.D.A.Y.
+
+The assistant and app are renamed **F.R.I.D.A.Y.** — inspired by Iron Man's F.R.I.D.A.Y.
+AI — throughout: page `<title>`s, the right-column panel (`_kiko_panel.html` →
+`_friday_panel.html`, `.kiko-*` → `.friday-*` CSS/JS/DOM ids), brand text in `base.html`,
+and a self-hosted brand logo image (`static/images/`, rendered via the `logo()` Jinja
+global with a `.brand-logo` style).
+
+The database file and env vars follow the rename: `DB_PATH` defaults to **`friday.db`**
+(env `FRIDAY_DB_PATH`), host/port via `FRIDAY_HOST` / `FRIDAY_PORT`. The old `kiko.db`
+name in §4/§5 is superseded; `.gitignore` now ignores `friday.db`.
+
+### 12.2 Persisted UI preferences
+
+Settings is no longer page-only. A new key/value table backs a small preferences API:
+
+```sql
+CREATE TABLE IF NOT EXISTS settings (
+    key         TEXT PRIMARY KEY,
+    value       TEXT NOT NULL,               -- stored as "true"/"false" strings
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+| Method + path | Body | Returns |
+|---|---|---|
+| `GET /api/settings/ui` | — | `{nav_collapsed, friday_visible}` (defaults applied) |
+| `POST /api/settings/ui` | any subset of `{nav_collapsed, friday_visible}` (bool) | full prefs |
+
+Defaults: `nav_collapsed=false`, `friday_visible=true`. Upsert via
+`ON CONFLICT(key) DO UPDATE`. The Settings page renders **Navigation** and
+**F.R.I.D.A.Y. Panel** toggle sections that read/write this API; a `localStorage`
+mirror keeps the shell responsive offline.
+
+### 12.3 Collapsible nav rail
+
+The left rail collapses to an icons-only strip (`--rail-w-collapsed`) and expands back
+to full width (`--rail-w`), animated via a `grid-template-columns` transition on
+`.app-shell`. Controls: the topbar `#nav-toggle` button, keyboard `Ctrl/Cmd+B`, and the
+Settings "Auto-collapse nav rail" toggle. State persists via `nav_collapsed`.
+
+**Hover-to-peek:** while collapsed, hovering the rail temporarily expands it and fades
+the labels in. Driven by an explicit `mouseenter`/`mouseleave` class toggle
+(`.is-hovering` on the rail, `.rail-hovered` on the shell) bound to `#nav-rail` — *not*
+by `:hover`/`:has()` alone, so it fires deterministically. (The earlier fallback bound
+to `.rail.is-collapsed`, which is `null` at load because the collapsed class is applied
+async after the prefs fetch, so its listeners never attached — fixed 2026-07-23.)
+
+### 12.4 F.R.I.D.A.Y. panel visibility toggle
+
+The right assistant panel can be hidden/shown, collapsing its grid column to `0`.
+Controls: the topbar `#friday-toggle` arrow button (icon rotates on state), keyboard
+`Ctrl/Cmd+Shift+F`, and the Settings "Show assistant panel" toggle. State persists via
+`friday_visible`. Settings-page toggles broadcast `nav-pref-changed` /
+`friday-pref-changed` `CustomEvent`s so the live shell updates without a reload.

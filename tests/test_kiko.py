@@ -1,4 +1,4 @@
-"""Phase 2 Kiko assistant: tools, agent loop, persistence, endpoints. LLM always faked."""
+"""Phase 2 F.R.I.D.A.Y. assistant: tools, agent loop, persistence, endpoints. LLM always faked."""
 import json
 
 import pytest
@@ -116,23 +116,23 @@ def test_to_api_shapes_tool_messages(ctx):
 def test_message_endpoint_streams(client, monkeypatch):
     fake = FakeClient([{"role": "assistant", "content": "Hi there."}])
     monkeypatch.setattr(agent, "DeepSeekClient", lambda *a, **k: fake)
-    res = client.post("/api/kiko/message", json={"text": "hello"})
+    res = client.post("/api/friday/message", json={"text": "hello"})
     body = res.data.decode()
     assert res.mimetype == "text/event-stream"
     assert "event: token" in body and "event: done" in body
 
 
 def test_message_endpoint_rejects_empty(client):
-    assert client.post("/api/kiko/message", json={"text": "  "}).status_code == 400
+    assert client.post("/api/friday/message", json={"text": "  "}).status_code == 400
 
 
 def test_history_and_clear_endpoints(client, monkeypatch):
     fake = FakeClient([{"role": "assistant", "content": "Done."}])
     monkeypatch.setattr(agent, "DeepSeekClient", lambda *a, **k: fake)
-    client.post("/api/kiko/message", json={"text": "hello"})
+    client.post("/api/friday/message", json={"text": "hello"})
 
-    hist = client.get("/api/kiko/history").get_json()
+    hist = client.get("/api/friday/history").get_json()
     assert [m["role"] for m in hist] == ["user", "assistant"]
 
-    assert client.post("/api/kiko/clear").status_code == 204
-    assert client.get("/api/kiko/history").get_json() == []
+    assert client.post("/api/friday/clear").status_code == 204
+    assert client.get("/api/friday/history").get_json() == []

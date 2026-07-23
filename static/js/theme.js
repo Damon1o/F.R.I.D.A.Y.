@@ -1,7 +1,7 @@
 // Theme toggle: persist to localStorage, fall back to OS preference.
 (function () {
   var root = document.documentElement;
-  var saved = localStorage.getItem('kiko-theme');
+  var saved = localStorage.getItem('friday-theme');
   if (!saved) {
     saved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   }
@@ -11,6 +11,6 @@
     if (!e.target.closest('#theme-toggle')) return;
     var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
-    localStorage.setItem('kiko-theme', next);
+    localStorage.setItem('friday-theme', next);
   });
 })();

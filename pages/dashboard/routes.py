@@ -2,7 +2,7 @@
 
 All data is computed here (no client JS). The bar chart is CSS heights; the line
 chart is a server-built SVG polyline. Adding events/tasks lives on their own pages
-and in the Kiko panel — the dashboard only displays.
+and in the F.R.I.D.A.Y. panel — the dashboard only displays.
 """
 from datetime import date, datetime, timedelta
 
