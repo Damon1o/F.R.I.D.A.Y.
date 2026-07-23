@@ -77,3 +77,32 @@ def _llm_error(e: LLMError) -> str:
     if str(e) == "no API key":
         return "F.R.I.D.A.Y. is unavailable — set DEEPSEEK_API_KEY in your .env."
     return f"F.R.I.D.A.Y. hit an error: {e}"
+
+
+def run_text(user_text: str, client=None) -> dict:
+    """Non-streaming sibling of run_turn: run the tool loop, return {reply, actions}.
+
+    Same loop as run_turn but collects instead of yielding (SSE vs dict); the shared
+    helpers (_system/_args/dispatch/messages) hold the real logic.
+    """
+    client = client or DeepSeekClient()
+    messages.add("user", user_text)
+    actions: list[str] = []
+    try:
+        for _ in range(MAX_STEPS):
+            msg = client.complete([_system(), *messages.to_api()], TOOLS)
+            tool_calls = msg.get("tool_calls")
+            if tool_calls:
+                messages.add("assistant", msg.get("content"), tool_calls=tool_calls)
+                for tc in tool_calls:
+                    name = tc["function"]["name"]
+                    actions.append(name)
+                    result = dispatch(name, _args(tc))
+                    messages.add("tool", json.dumps(result), tool_call_id=tc["id"], name=name)
+                continue
+            text = msg.get("content") or ""
+            messages.add("assistant", text)
+            return {"reply": text, "actions": actions}
+        return {"reply": "F.R.I.D.A.Y. couldn't finish that in time.", "actions": actions}
+    except LLMError as e:
+        return {"reply": _llm_error(e), "actions": actions}
