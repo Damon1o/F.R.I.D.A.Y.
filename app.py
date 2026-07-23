@@ -1,4 +1,4 @@
-"""F.R.I.D.A.Y. — Flask app factory. Server-rendered Jinja + stdlib sqlite3, no build step."""
+"""F.R.I.D.A.Y. — Flask app factory. Server-rendered Jinja + Postgres via psycopg, no build step."""
 import re
 from functools import lru_cache
 from pathlib import Path

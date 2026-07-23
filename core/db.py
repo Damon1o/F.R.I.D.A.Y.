@@ -10,7 +10,7 @@ SCHEMA = Path(__file__).resolve().parent.parent / "schema.sql"
 
 def get_db() -> psycopg.Connection:
     if "db" not in g:
-        g.db = psycopg.connect(current_app.config["DATABASE_URL"], row_factory=dict_row)
+        g.db = psycopg.connect(current_app.config["DATABASE_URL"], row_factory=dict_row, prepare_threshold=None)
     return g.db
 
 
