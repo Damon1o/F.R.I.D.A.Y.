@@ -177,9 +177,17 @@ input:focus, textarea:focus { outline: 2px solid var(--outline); outline-offset:
   background: var(--primary); color: var(--on-primary); animation: breathe 4s ease-in-out infinite; }
 .kiko-title { display: flex; flex-direction: column; }
 .kiko-title small { color: var(--on-surface-variant); font-size: var(--text-label); }
-.kiko-body { flex: 1; }
+#kiko-new { margin-left: auto; }
+.kiko-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
 .kiko-note { color: var(--on-surface-variant); font-size: var(--text-body); }
+.kiko-msg { max-width: 85%; padding: 8px 12px; border-radius: var(--radius-md);
+  font-size: var(--text-body); line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
+.kiko-msg.user { align-self: flex-end; background: var(--primary); color: var(--on-primary); }
+.kiko-msg.assistant { align-self: flex-start; background: var(--surface-container-high); color: var(--on-surface); }
+.kiko-msg.is-pending { color: var(--on-surface-variant); font-style: italic; }
+.kiko-msg.is-error { background: transparent; color: var(--on-surface-variant); font-style: italic; }
 .kiko-input { display: flex; gap: 8px; }
+.kiko-input input { flex: 1; min-width: 0; }
 @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
 
 /* ---- Settings ---- */

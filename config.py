@@ -14,4 +14,8 @@ class Config:
     DB_PATH = os.environ.get("KIKO_DB_PATH", str(BASE_DIR / "kiko.db"))
     HOST = os.environ.get("KIKO_HOST", "127.0.0.1")
     PORT = int(os.environ.get("KIKO_PORT", "5000"))
-    # ponytail: later-phase keys (DeepSeek etc.) live in .env; not read until Phase 2.
+    # Phase 2 — Kiko assistant (DeepSeek, OpenAI-compatible). Missing key is not fatal;
+    # the agent emits a friendly error frame instead of crashing.
+    DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+    DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")

@@ -45,8 +45,9 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     from pages.calendar.routes import calendar_bp
     from pages.todos.routes import todos_bp
     from pages.settings.routes import settings_bp
+    from pages.kiko.routes import kiko_bp
 
-    for bp in (dashboard_bp, calendar_bp, todos_bp, settings_bp):
+    for bp in (dashboard_bp, calendar_bp, todos_bp, settings_bp, kiko_bp):
         app.register_blueprint(bp)
 
     return app
