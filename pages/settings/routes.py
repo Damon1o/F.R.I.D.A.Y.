@@ -41,7 +41,8 @@ def _get_prefs() -> dict:
 
 def _set_pref(key: str, value: str) -> None:
     execute(
-        "INSERT INTO settings (key, value) VALUES (?, ?) "
-        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')",
+        "INSERT INTO settings (key, value) VALUES (%s, %s) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, "
+        "updated_at=to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')",
         (key, value),
     )

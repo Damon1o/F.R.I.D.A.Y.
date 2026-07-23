@@ -1,14 +1,25 @@
+import os
+
 import pytest
 
 from app import create_app
 
+TEST_DB_URL = os.environ.get(
+    "TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/friday_test"
+)
+
 
 @pytest.fixture
-def app(tmp_path):
-    # File-backed temp DB (not :memory:, which wouldn't survive per-request connections).
-    # Empty API key so the LLM is never really reached, regardless of the dev's .env.
-    return create_app({"DB_PATH": str(tmp_path / "test.db"), "TESTING": True,
-                       "DEEPSEEK_API_KEY": ""})
+def app():
+    # Real Postgres. Empty API key so the LLM is never reached, regardless of the dev's .env.
+    app = create_app({"DATABASE_URL": TEST_DB_URL, "TESTING": True, "DEEPSEEK_API_KEY": ""})
+    # Fresh state per test: create_app already ran init_db (CREATE IF NOT EXISTS); wipe rows + reset ids.
+    with app.app_context():
+        from core import db
+        conn = db.get_db()
+        conn.execute("TRUNCATE settings, events, todos, messages RESTART IDENTITY CASCADE")
+        conn.commit()
+    return app
 
 
 @pytest.fixture

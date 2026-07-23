@@ -7,7 +7,7 @@ from core.db import execute, query
 def add(role, content=None, *, tool_calls=None, tool_call_id=None, name=None) -> None:
     execute(
         "INSERT INTO messages (role, content, tool_calls, tool_call_id, name) "
-        "VALUES (?, ?, ?, ?, ?)",
+        "VALUES (%s, %s, %s, %s, %s)",
         (role, content, json.dumps(tool_calls) if tool_calls else None, tool_call_id, name),
     )
 

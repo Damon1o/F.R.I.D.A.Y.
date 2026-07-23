@@ -1,5 +1,6 @@
-"""Thin sqlite3 layer. One connection per request via Flask's `g`."""
-import sqlite3
+"""Thin psycopg 3 layer. One connection per request via Flask's `g`."""
+import psycopg
+from psycopg.rows import dict_row
 from pathlib import Path
 
 from flask import current_app, g
@@ -7,11 +8,9 @@ from flask import current_app, g
 SCHEMA = Path(__file__).resolve().parent.parent / "schema.sql"
 
 
-def get_db() -> sqlite3.Connection:
+def get_db() -> psycopg.Connection:
     if "db" not in g:
-        g.db = sqlite3.connect(current_app.config["DB_PATH"])
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
+        g.db = psycopg.connect(current_app.config["DATABASE_URL"], row_factory=dict_row)
     return g.db
 
 
@@ -23,8 +22,9 @@ def close_db(_exc=None) -> None:
 
 def init_db() -> None:
     """Create tables if absent. Safe to call on every boot."""
-    get_db().executescript(SCHEMA.read_text(encoding="utf-8"))
-    get_db().commit()
+    db = get_db()
+    db.execute(SCHEMA.read_text(encoding="utf-8"))
+    db.commit()
 
 
 def query(sql: str, params=(), *, one: bool = False):
@@ -32,8 +32,8 @@ def query(sql: str, params=(), *, one: bool = False):
     return (rows[0] if rows else None) if one else rows
 
 
-def execute(sql: str, params=()) -> sqlite3.Cursor:
-    """Run a write and commit. Returns the cursor (for lastrowid/rowcount)."""
+def execute(sql: str, params=()):
+    """Run a write and commit. Returns the committed cursor (for rowcount / RETURNING)."""
     db = get_db()
     cur = db.execute(sql, params)
     db.commit()

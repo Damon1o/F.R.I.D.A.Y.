@@ -54,10 +54,10 @@ def list_events(start=None, end=None) -> list[dict]:
     sql = "SELECT * FROM events"
     params, where = [], []
     if start:
-        where.append("start_at >= ?")
+        where.append("start_at >= %s")
         params.append(start)
     if end:
-        where.append("start_at <= ?")
+        where.append("start_at <= %s")
         params.append(end)
     if where:
         sql += " WHERE " + " AND ".join(where)
@@ -66,18 +66,18 @@ def list_events(start=None, end=None) -> list[dict]:
 
 
 def get_event(event_id: int):
-    row = query("SELECT * FROM events WHERE id = ?", (event_id,), one=True)
+    row = query("SELECT * FROM events WHERE id = %s", (event_id,), one=True)
     return to_dict(row) if row else None
 
 
 def create_event(data: dict) -> dict:
     fields = _clean(data, partial=False)
     cols = list(fields)
-    cur = execute(
-        f"INSERT INTO events ({','.join(cols)}) VALUES ({','.join('?' * len(cols))})",
+    row = execute(
+        f"INSERT INTO events ({','.join(cols)}) VALUES ({','.join(['%s'] * len(cols))}) RETURNING id",
         [fields[c] for c in cols],
-    )
-    return get_event(cur.lastrowid)
+    ).fetchone()
+    return get_event(row["id"])
 
 
 def update_event(event_id: int, data: dict):
@@ -87,11 +87,11 @@ def update_event(event_id: int, data: dict):
     if fields:
         cols = list(fields)
         execute(
-            f"UPDATE events SET {','.join(f'{c}=?' for c in cols)} WHERE id = ?",
+            f"UPDATE events SET {','.join(f'{c}=%s' for c in cols)} WHERE id = %s",
             [fields[c] for c in cols] + [event_id],
         )
     return get_event(event_id)
 
 
 def delete_event(event_id: int) -> bool:
-    return execute("DELETE FROM events WHERE id = ?", (event_id,)).rowcount > 0
+    return execute("DELETE FROM events WHERE id = %s", (event_id,)).rowcount > 0
