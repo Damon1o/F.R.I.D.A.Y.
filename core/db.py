@@ -41,6 +41,7 @@ def execute(sql: str, params=()):
 
 
 def init_app(app) -> None:
+    # No eager connect: on serverless a DB hiccup here would crash the whole
+    # function import and 500 every route. Schema is owned by the migration
+    # script; connections stay lazy (per-request via get_db).
     app.teardown_appcontext(close_db)
-    with app.app_context():
-        init_db()

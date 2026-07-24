@@ -14,9 +14,11 @@ def app():
     # Real Postgres. Empty API key so the LLM is never reached, regardless of the dev's .env.
     app = create_app({"DATABASE_URL": TEST_DB_URL, "TESTING": True,
                       "DEEPSEEK_API_KEY": "", "VOICE_TOKEN": "testsecret"})
-    # Fresh state per test: create_app already ran init_db (CREATE IF NOT EXISTS); wipe rows + reset ids.
+    # create_app no longer inits the DB; do it here. Ensure schema (CREATE IF
+    # NOT EXISTS), then wipe rows + reset ids for fresh state per test.
     with app.app_context():
         from core import db
+        db.init_db()
         conn = db.get_db()
         conn.execute("TRUNCATE settings, events, todos, messages RESTART IDENTITY CASCADE")
         conn.commit()
