@@ -14,3 +14,6 @@ friday.db
 # Voice binaries/models — vendored at deploy time, not committed (keep the README)
 vendor/voice/*
 !vendor/voice/README.md
+
+.vercel
+.env*

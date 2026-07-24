@@ -25,6 +25,10 @@ class MusicProvider(ABC):
         pass
 
     @abstractmethod
+    def play_track(self, query: str) -> bool:
+        pass
+
+    @abstractmethod
     def is_connected(self) -> bool:
         pass
 
@@ -121,6 +125,16 @@ class SpotifyProvider(MusicProvider):
         resp = self._request(method, endpoint)
         return resp is not None
 
+    def play_track(self, query: str) -> bool:
+        resp = self._request("GET", "/search", params={"q": query, "type": "track", "limit": 1})
+        if not resp:
+            return False
+        items = resp.json().get("tracks", {}).get("items", [])
+        if not items:
+            return False
+        resp = self._request("PUT", "/me/player/play", json={"uris": [items[0]["uri"]]})
+        return resp is not None
+
     def is_connected(self) -> bool:
         return bool(self._access_token or self._refresh_token)
 
@@ -167,6 +181,9 @@ class LocalProvider(MusicProvider):
         return None
 
     def control(self, action: str, position_ms: Optional[int] = None) -> bool:
+        return False
+
+    def play_track(self, query: str) -> bool:
         return False
 
     def is_connected(self) -> bool:

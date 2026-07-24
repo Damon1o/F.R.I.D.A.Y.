@@ -6,6 +6,7 @@ ValidationError returns {"error": ...} so the LLM can self-correct mid-turn.
 from pages.calendar import models as events
 from pages.calendar.models import ValidationError
 from pages.todos import models as todos
+from pages.music import get_provider
 
 _DT = "ISO-8601 datetime, e.g. 2026-07-24T15:00:00. Assume the user's local time."
 
@@ -68,6 +69,13 @@ TOOLS = [
     _fn("list_todos", "List to-dos. Pass done=false for open tasks only.", {
         "done": {"type": "boolean"},
     }, []),
+    _fn("control_music", "Control music playback.", {
+        "action": {"type": "string", "enum": ["play", "pause", "next", "prev", "seek"]},
+        "position_ms": {"type": "integer", "description": "Seek target, required for action=seek."},
+    }, ["action"]),
+    _fn("play_track", "Search and play a track by name/artist.", {
+        "query": {"type": "string"},
+    }, ["query"]),
 ]
 
 
@@ -94,6 +102,10 @@ def dispatch(name: str, args: dict):
             return {"deleted": ok} if ok else {"error": "todo not found"}
         if name == "list_todos":
             return todos.list_todos(args.get("done"))
+        if name == "control_music":
+            return {"ok": get_provider().control(args["action"], args.get("position_ms"))}
+        if name == "play_track":
+            return {"playing": get_provider().play_track(args["query"])}
         return {"error": f"unknown tool {name}"}
     except ValidationError as e:
         return {"error": str(e)}

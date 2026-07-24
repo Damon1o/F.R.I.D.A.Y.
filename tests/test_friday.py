@@ -4,7 +4,7 @@ import json
 import pytest
 
 from core.llm import LLMError
-from pages.friday import agent, messages
+from pages.friday import agent, messages, tools
 from pages.friday.tools import dispatch
 from pages.todos import models as todos
 
@@ -46,6 +46,56 @@ def test_dispatch_missing_row(ctx):
 
 def test_dispatch_unknown_tool(ctx):
     assert "unknown tool" in dispatch("frobnicate", {})["error"]
+
+
+# ---- music tools ----
+
+class FakeProvider:
+    """Records the last control action / play query; fails on sentinel inputs."""
+    def __init__(self):
+        self.controlled = None
+        self.played = None
+
+    def control(self, action, position_ms=None):
+        self.controlled = action
+        return action != "boom"
+
+    def play_track(self, query):
+        self.played = query
+        return query != "nope"
+
+
+@pytest.fixture
+def fake_music(monkeypatch):
+    fake = FakeProvider()
+    monkeypatch.setattr(tools, "get_provider", lambda service="spotify": fake)
+    return fake
+
+
+def test_dispatch_control_music(fake_music):
+    assert dispatch("control_music", {"action": "next"}) == {"ok": True}
+    assert fake_music.controlled == "next"
+
+
+def test_dispatch_control_music_failure_reports_not_ok(fake_music):
+    assert dispatch("control_music", {"action": "boom"}) == {"ok": False}
+
+
+def test_dispatch_control_music_missing_action(fake_music):
+    assert "error" in dispatch("control_music", {})
+
+
+def test_dispatch_play_track(fake_music):
+    assert dispatch("play_track", {"query": "Bohemian Rhapsody"}) == {"playing": True}
+    assert fake_music.played == "Bohemian Rhapsody"
+
+
+def test_dispatch_play_track_no_match_reports_not_playing(fake_music):
+    assert dispatch("play_track", {"query": "nope"}) == {"playing": False}
+
+
+def test_dispatch_play_track_missing_query(fake_music):
+    assert "error" in dispatch("play_track", {})
 
 
 # ---- agent loop ----
