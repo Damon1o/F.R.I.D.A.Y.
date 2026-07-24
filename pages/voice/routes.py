@@ -57,7 +57,10 @@ def voice():
         with os.fdopen(in_fd, "wb") as f:
             f.write(audio)
 
-        transcript = stt.transcribe(in_path)
+        try:
+            transcript = stt.transcribe(in_path)
+        except stt.STTError:
+            transcript = ""            # unrecognizable audio ⇒ spoken fallback (spec §5)
         if transcript:
             result = agent.run_text(transcript)
             reply, actions = result["reply"], result["actions"]

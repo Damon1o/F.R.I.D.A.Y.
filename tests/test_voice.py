@@ -118,3 +118,23 @@ def test_voice_empty_transcript_skips_agent(client, monkeypatch):
     assert res.status_code == 200
     assert called["agent"] is False          # blank STT ⇒ agent not called
     assert b"didn't catch that" in res.data
+
+
+def test_voice_stt_error_falls_back_to_spoken_reply(client, monkeypatch):
+    called = {"agent": False}
+
+    def boom(*a, **k):
+        called["agent"] = True
+        return {"reply": "x", "actions": []}
+
+    def raise_stt(p):
+        raise voice_routes.stt.STTError("whisper exited non-zero")
+
+    _patch_pipeline(monkeypatch)
+    monkeypatch.setattr(voice_routes.stt, "transcribe", raise_stt)
+    monkeypatch.setattr(voice_routes.agent, "run_text", boom)
+    res = client.post("/api/voice", data=_wav_upload(),
+                      content_type="multipart/form-data", headers=AUTH)
+    assert res.status_code == 200               # STT failure ⇒ spoken 200, not 500
+    assert called["agent"] is False             # agent skipped on STT error
+    assert b"didn't catch that" in res.data
