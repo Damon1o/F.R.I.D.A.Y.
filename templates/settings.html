@@ -52,6 +52,47 @@
   </div>
 </section>
 
+{# ---- Music / Spotify ---- #}
+<section class="card glass settings-group" id="music-settings">
+  <h3>{{ icon('music', 18) }} Music (Spotify)</h3>
+
+  <div class="setting-row">
+    <div>
+      <strong>Now Playing widget</strong>
+      <p class="subtle">Shows current track on Dashboard. Requires Spotify Premium for playback control.</p>
+    </div>
+    <span class="pill" id="music-status">Not connected</span>
+  </div>
+
+  <div class="setting-row" id="music-disconnected" style="display:none;">
+    <div>
+      <strong>Connect Spotify</strong>
+      <p class="subtle">Authorize F.R.I.D.A.Y. to read your playback state and control music.</p>
+    </div>
+    <a class="btn-primary" href="/api/music/spotify/login" id="spotify-connect-btn">Connect Spotify</a>
+  </div>
+
+  <div class="setting-row" id="music-connected" style="display:none;">
+    <div>
+      <strong>Connected</strong>
+      <p class="subtle">Spotify is linked. The Dashboard widget will show your current track.</p>
+    </div>
+    <button class="btn-primary" id="spotify-disconnect-btn" type="button">Disconnect</button>
+  </div>
+
+  <div class="setting-row">
+    <div>
+      <strong>Environment variables needed</strong>
+      <p class="subtle">Add these to your <code>.env</code> file:</p>
+    </div>
+  </div>
+  <div class="stack" style="font-size: var(--text-label); color: var(--on-surface-variant); font-family: monospace;">
+    <code>SPOTIFY_CLIENT_ID=your_client_id</code>
+    <code>SPOTIFY_CLIENT_SECRET=your_client_secret</code>
+    <code>SPOTIFY_REDIRECT_URI=http://localhost:5000/api/music/spotify/callback</code>
+  </div>
+</section>
+
 <section class="card glass settings-group">
   <h3>Profile</h3>
   <label class="field">Display name <input placeholder="You" disabled></label>
@@ -112,7 +153,6 @@
   }
 
   initToggle('nav-auto-collapse', 'nav_collapsed', false, (on) => {
-    // Tell the nav rail to update
     window.dispatchEvent(new CustomEvent('nav-pref-changed', { detail: { collapsed: on } }));
   });
 
@@ -123,5 +163,62 @@
   document.getElementById('settings-theme')?.addEventListener('click', () => {
     document.getElementById('theme-toggle')?.click();
   });
+
+  // Music settings: check connection status
+  async function checkMusicStatus() {
+    try {
+      const res = await fetch('/api/music/status?service=spotify');
+      const data = await res.json();
+      const statusEl = document.getElementById('music-status');
+      const disconnected = document.getElementById('music-disconnected');
+      const connected = document.getElementById('music-connected');
+      if (data.connected) {
+        statusEl.textContent = 'Connected';
+        statusEl.style.background = 'rgba(0, 200, 0, 0.2)';
+        statusEl.style.color = '#4ade80';
+        disconnected.style.display = 'none';
+        connected.style.display = 'flex';
+      } else {
+        statusEl.textContent = 'Not connected';
+        statusEl.style.background = '';
+        statusEl.style.color = '';
+        disconnected.style.display = 'flex';
+        connected.style.display = 'none';
+      }
+      // Show error message from URL params
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('music_connected') === 'spotify') {
+        alert('Spotify connected successfully!');
+        params.delete('music_connected');
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+      if (params.get('music_error') === 'spotify_auth_failed') {
+        alert('Spotify authorization failed. Please try again.');
+        params.delete('music_error');
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+      if (params.get('music_error') === 'spotify_token_exchange_failed') {
+        alert('Failed to exchange Spotify code. Check server logs.');
+        params.delete('music_error');
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } catch (e) {
+      console.error('Music status check failed', e);
+    }
+  }
+
+  // Disconnect handler
+  document.getElementById('spotify-disconnect-btn')?.addEventListener('click', async () => {
+    if (!confirm('Disconnect Spotify?')) return;
+    try {
+      // In a full implementation, this would clear stored tokens
+      // For now, just clear env vars or redirect to a disconnect endpoint
+      alert('To fully disconnect, remove SPOTIFY_ACCESS_TOKEN and SPOTIFY_REFRESH_TOKEN from your environment and restart the app.');
+    } catch (e) {
+      console.error('Disconnect failed', e);
+    }
+  });
+
+  checkMusicStatus();
 </script>
 {% endblock %}

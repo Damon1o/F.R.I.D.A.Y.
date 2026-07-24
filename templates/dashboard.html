@@ -71,6 +71,17 @@
     </div>
   </section>
 
+  {# ---- Now Playing ---- #}
+  <section class="card glass music-card" aria-labelledby="music-h" id="music-widget">
+    <div class="card-head">
+      <h3 id="music-h">{{ icon('music', 18) }} Now Playing</h3>
+      <span class="tag" id="music-provider-tag">Spotify</span>
+    </div>
+    <div class="music-content" id="music-content">
+      <div class="music-loading">{{ icon('loader', 20) }} Connecting…</div>
+    </div>
+  </section>
+
   {# ---- Upcoming events ---- #}
   <section class="card glass" aria-labelledby="up-h">
     <div class="card-head">
@@ -89,4 +100,8 @@
     </ul>
   </section>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/music.js') }}"></script>
 {% endblock %}
