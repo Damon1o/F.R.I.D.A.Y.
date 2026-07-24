@@ -20,3 +20,6 @@ class Config:
     DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
     # Spec B — voice endpoint shared secret. Empty ⇒ /api/voice refuses every request (fail closed).
     VOICE_TOKEN = os.environ.get("VOICE_TOKEN", "")
+    # Hard cap on any request body (Werkzeug rejects with 413 during parsing, before buffering).
+    # A little above the voice audio cap (2 MB) to allow multipart overhead.
+    MAX_CONTENT_LENGTH = 2 * 1024 * 1024 + 64 * 1024
