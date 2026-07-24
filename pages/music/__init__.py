@@ -42,14 +42,35 @@ class SpotifyProvider(MusicProvider):
         self._load_tokens()
 
     def _load_tokens(self):
-        # In production, load from secure storage (DB, keyring, encrypted file)
-        # For now, use environment variables
+        # Env vars seed a fresh deploy; the settings table holds tokens the OAuth
+        # callback obtained, and wins (env is only a bootstrap fallback). DB read
+        # is best-effort: no app context / DB down falls back to env, never 500s.
         self._access_token = os.getenv("SPOTIFY_ACCESS_TOKEN")
         self._refresh_token = os.getenv("SPOTIFY_REFRESH_TOKEN")
+        try:
+            from core.db import query
+            stored = {r["key"]: r["value"] for r in query(
+                "SELECT key, value FROM settings "
+                "WHERE key IN ('spotify_access_token', 'spotify_refresh_token')")}
+            self._access_token = stored.get("spotify_access_token") or self._access_token
+            self._refresh_token = stored.get("spotify_refresh_token") or self._refresh_token
+        except Exception:
+            pass
 
     def _save_tokens(self, access_token: str, refresh_token: str):
-        # In production, save to secure storage
-        pass
+        try:
+            from core.db import execute
+            for key, val in (("spotify_access_token", access_token),
+                             ("spotify_refresh_token", refresh_token)):
+                if val:
+                    execute(
+                        "INSERT INTO settings (key, value) VALUES (%s, %s) "
+                        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, "
+                        "updated_at=to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')",
+                        (key, val),
+                    )
+        except Exception:
+            pass
 
     def _refresh_access_token(self) -> bool:
         if not self._refresh_token or not self.client_id or not self.client_secret:
