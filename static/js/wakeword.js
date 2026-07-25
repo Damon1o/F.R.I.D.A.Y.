@@ -42,7 +42,6 @@
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: false, autoGainControl: false }
       });
       ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-      if (ctx.state === 'suspended') await ctx.resume();
       var src = ctx.createMediaStreamSource(stream);
       var node = ctx.createScriptProcessor(1024, 1, 1);
 
@@ -113,6 +112,7 @@
       node.connect(mute);
       mute.connect(ctx.destination);
       running = true;
+      ctx.resume().then(function () { console.info('wake word: ' + ctx.state); });
     } catch (err) {
       console.error('wake word: start failed', err);
       stop();
@@ -131,17 +131,19 @@
   window.addEventListener('wake-pref-changed', function (e) { e.detail.enabled ? start() : stop(); });
   window.addEventListener('wake-threshold-changed', function (e) { threshold = e.detail.value; });
 
-  // Autoplay/permission policy means the mic can only open after a user gesture on a
-  // fresh page load; if it is denied, start() logs and stays off until the next click.
+  // A page loaded without a user gesture gets a suspended AudioContext, and a suspended
+  // context never pumps onaudioprocess — so nothing is ever scored. Retry the resume on
+  // every gesture until it actually takes; the settings page only appeared to work
+  // because flipping the toggle *is* the gesture.
+  ['click', 'keydown', 'touchstart'].forEach(function (evt) {
+    document.addEventListener(evt, function () {
+      if (!running) start();
+      else if (ctx && ctx.state !== 'running') ctx.resume();
+    }, { capture: true });
+  });
+
   fetch('/api/settings/ui')
     .then(function (r) { return r.json(); })
-    .then(function (prefs) {
-      if (prefs.wake_word !== 'true') return;
-      start();
-      document.addEventListener('click', function retry() {
-        if (running) { document.removeEventListener('click', retry); return; }
-        start();
-      });
-    })
+    .then(function (prefs) { if (prefs.wake_word === 'true') start(); })
     .catch(function () { /* settings unreachable: stay off */ });
 })();

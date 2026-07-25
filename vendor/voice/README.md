@@ -26,5 +26,5 @@ and the browser must fetch them:
 | `static/vendor/wakeword/melspectrogram.onnx`, `embedding_model.onnx` | openWakeWord's shared feature extractors (`dscripka/openWakeWord` v0.5.1) |
 | `static/vendor/ort/` | onnxruntime-web 1.20.1, wasm backend, single-threaded |
 
-Two consumers, same models: `static/js/wakeword.js` (ear button in the F.R.I.D.A.Y.
-panel) and `scripts/wakeword.py` (headless listener, POSTs to `/api/voice`).
+Two consumers, same models: `static/js/wakeword.js` (the `wake_word` setting in
+Settings > F.R.I.D.A.Y. Panel) and `scripts/wakeword.py` (headless listener, POSTs to `/api/voice`).
