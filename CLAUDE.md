@@ -3,6 +3,9 @@
 ## Always
 - **RTK**: route dev/CLI operations through RTK (Rust Token Killer) for token savings.
   Active via the global `PreToolUse` Bash hook — do not bypass it.
+- **i-have-adhd**: apply the `i-have-adhd` skill (`.agents/skills/i-have-adhd/`) to every
+  response — lead with the next action, number multi-step work, restate state across turns,
+  suppress tangents, give specific time estimates. Stays on for the whole session.
 - **Ponytail**: apply the `ponytail` skill (laziest solution that works — YAGNI,
   stdlib/native before dependencies, one line before fifty) to every coding task:
   writing, adding, refactoring, fixing, reviewing code, and choosing dependencies.

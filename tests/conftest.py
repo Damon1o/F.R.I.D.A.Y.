@@ -8,6 +8,11 @@ TEST_DB_URL = os.environ.get(
     "TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/friday_test"
 )
 
+# The app fixture TRUNCATEs every table. If TEST_DATABASE_URL ever points at the
+# real database, a test run silently destroys real data -- refuse to start.
+if TEST_DB_URL == os.environ.get("DATABASE_URL"):
+    raise RuntimeError("TEST_DATABASE_URL equals DATABASE_URL; tests would wipe real data")
+
 
 @pytest.fixture
 def app():

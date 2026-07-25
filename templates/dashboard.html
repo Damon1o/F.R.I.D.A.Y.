@@ -38,7 +38,7 @@
     <ul class="bars" aria-label="Events per day this week">
       {% for label, bar, count in week %}
       <li>
-        <span class="bar-track"><span class="bar-fill" style="height: {{ bar.pct }}%"></span></span>
+        <span class="bar-track">{% if count %}<span class="bar-fill" style="height: {{ bar.pct }}%"></span>{% endif %}</span>
         <span class="bar-val">{{ count }}</span>
         <span class="bar-lab">{{ label }}</span>
       </li>
@@ -53,24 +53,6 @@
 </section>
 
 <div class="bento">
-  {# ---- Activity sparkline ---- #}
-  <section class="card glass" aria-labelledby="act-h">
-    <div class="card-head">
-      <h3 id="act-h">{{ icon('trending-up', 18) }} Activity</h3>
-      <span class="tag">Tasks done · 7d</span>
-    </div>
-    <div class="spark">
-      <svg viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="Tasks completed, last 7 days">
-        <polyline class="spark-line" points="{{ spark }}" />
-      </svg>
-      <ul class="spark-axis">
-        {% for label, count in spark_days %}
-        <li><span class="sa-val">{{ count }}</span><span class="sa-lab">{{ label }}</span></li>
-        {% endfor %}
-      </ul>
-    </div>
-  </section>
-
   {# ---- Now Playing ---- #}
   <section class="card glass music-card" aria-labelledby="music-h" id="music-widget">
     <div class="card-head">

@@ -31,15 +31,6 @@ def _bars(counts: list[int]) -> list[dict]:
     return [{"pct": round(c / top * 100)} for c in counts]
 
 
-def _sparkline(counts: list[int], w: int = 100, h: int = 40) -> str:
-    """Polyline points across a 0..w by 0..h box, y inverted (top = busiest)."""
-    top = max(counts) or 1
-    n = len(counts)
-    step = w / (n - 1) if n > 1 else 0
-    pts = [f"{round(i * step, 1)},{round(h - c / top * h, 1)}" for i, c in enumerate(counts)]
-    return " ".join(pts)
-
-
 @dashboard_bp.route("/")
 def index():
     today = date.today()
@@ -64,11 +55,9 @@ def index():
     events_by_day = [sum(1 for e in week_events if _day_of(e["start_at"]) == d.isoformat())
                      for d in week_days]
 
-    # Last 7 days (rolling): tasks completed per day.
-    last7 = [today - timedelta(days=6 - i) for i in range(7)]
-    comp_by_day = [sum(1 for t in all_todos if _day_of(t["completed_at"]) == d.isoformat())
-                   for d in last7]
-    completed_week = sum(comp_by_day)
+    # Last 7 days (rolling): tasks completed.
+    last7 = {(today - timedelta(days=i)).isoformat() for i in range(7)}
+    completed_week = sum(1 for t in all_todos if _day_of(t["completed_at"]) in last7)
 
     # Next events from now onward.
     upcoming = list_events(start=now.isoformat())[:6]
@@ -89,7 +78,5 @@ def index():
             ("Overdue", overdue),
             ("Completed (7d)", completed_week),
         ],
-        spark=_sparkline(comp_by_day),
-        spark_days=list(zip([_WD[d.weekday()][0] for d in last7], comp_by_day)),
         upcoming=upcoming,
     )

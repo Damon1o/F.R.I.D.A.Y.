@@ -52,6 +52,27 @@
       <p class="subtle">Toggle F.R.I.D.A.Y. panel visibility anytime.</p>
     </div>
   </div>
+
+  <div class="setting-row">
+    <div>
+      <strong>Wake word &ldquo;Hey Friday&rdquo;</strong>
+      <p class="subtle">Always listen for the wake word and start a voice command when it fires.
+        Runs entirely in the browser; needs microphone permission.</p>
+    </div>
+    <button class="btn-primary toggle-btn" type="button" id="wake-word" data-pref="wake_word"
+      aria-pressed="false">
+      <span class="toggle-on">On</span><span class="toggle-off">Off</span>
+    </button>
+  </div>
+
+  <div class="setting-row">
+    <div>
+      <strong>Wake word sensitivity</strong>
+      <p class="subtle">Lower detects more easily but false-fires more. Default 0.5.
+        Live score while listening: <output id="wake-score">—</output></p>
+    </div>
+    <input type="range" id="wake-threshold" min="0.05" max="0.95" step="0.05" value="0.5">
+  </div>
 </section>
 
 {# ---- Music / Spotify ---- #}
@@ -151,6 +172,22 @@
   initToggle('friday-visible', 'friday_visible', true, (on) => {
     window.dispatchEvent(new CustomEvent('friday-pref-changed', { detail: { visible: on } }));
   });
+
+  initToggle('wake-word', 'wake_word', false, (on) => {
+    window.dispatchEvent(new CustomEvent('wake-pref-changed', { detail: { enabled: on } }));
+  });
+
+  // Sensitivity lives in localStorage — it is a per-device tuning knob, not a synced pref.
+  const thresh = document.getElementById('wake-threshold');
+  thresh.value = localStorage.getItem('friday_wake_threshold') || '0.5';
+  thresh.addEventListener('input', () => {
+    localStorage.setItem('friday_wake_threshold', thresh.value);
+    window.dispatchEvent(new CustomEvent('wake-threshold-changed', { detail: { value: +thresh.value } }));
+  });
+
+  // Live score readout, so tuning the slider is not guesswork.
+  const scoreOut = document.getElementById('wake-score');
+  window.addEventListener('wake-score', (e) => { scoreOut.textContent = e.detail.score.toFixed(3); });
 
   document.getElementById('settings-theme')?.addEventListener('click', () => {
     document.getElementById('theme-toggle')?.click();

@@ -17,10 +17,36 @@
   rec.maxAlternatives = 1;
   var listening = false;
 
+  // SpeechSynthesis can only use voices the OS ships — it cannot load piper's
+  // en_GB-alan-medium.onnx. Closest stand-in: an en-GB male voice, slowed and
+  // pitched down to sit near alan. Names differ per platform, so try in order.
+  var VOICE_PREFS = [/Ryan/i, /Google UK English Male/i, /Daniel/i, /Arthur/i, /George/i];
+  var voice = null;
+
+  function pickVoice() {
+    var gb = window.speechSynthesis.getVoices().filter(function (v) {
+      return /^en[-_]GB/i.test(v.lang);
+    });
+    var best = null;
+    VOICE_PREFS.forEach(function (re) {
+      if (!best) best = gb.filter(function (v) { return re.test(v.name); })[0];
+    });
+    voice = best || gb[0] || null;   // any en-GB beats the default en-US
+  }
+
+  if (window.speechSynthesis) {
+    pickVoice();                                        // populated already in Firefox/Safari
+    window.speechSynthesis.onvoiceschanged = pickVoice; // Chrome loads the list async
+  }
+
   function speak(text) {
     if (!text || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    var utt = new SpeechSynthesisUtterance(text);
+    if (voice) utt.voice = voice;
+    utt.rate = 0.95;
+    utt.pitch = 0.9;
+    window.speechSynthesis.speak(utt);
   }
 
   // Speak each assistant reply once it finishes streaming (bubble stops being pending).

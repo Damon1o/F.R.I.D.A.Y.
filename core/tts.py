@@ -4,7 +4,7 @@ from pathlib import Path
 
 VENDOR = Path(__file__).resolve().parent.parent / "vendor" / "voice"
 PIPER_BIN = VENDOR / "piper"
-PIPER_VOICE = VENDOR / "en_US-low.onnx"
+PIPER_VOICE = VENDOR / "en_GB-alan-medium.onnx"
 
 
 class TTSError(RuntimeError):

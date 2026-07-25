@@ -8,7 +8,9 @@ settings_bp = Blueprint("settings", __name__)
 DEFAULT_PREFS = {
     "nav_collapsed": "false",
     "friday_visible": "true",
+    "wake_word": "false",
 }
+_KEYS = tuple(DEFAULT_PREFS)
 
 
 @settings_bp.route("/settings")
@@ -25,14 +27,15 @@ def get_ui_settings():
 @settings_bp.route("/api/settings/ui", methods=["POST"])
 def set_ui_settings():
     data = request.get_json(silent=True) or {}
-    for key in ("nav_collapsed", "friday_visible"):
+    for key in _KEYS:
         if key in data:
             _set_pref(key, "true" if data[key] else "false")
     return jsonify(_get_prefs())
 
 
 def _get_prefs() -> dict:
-    rows = query("SELECT key, value FROM settings WHERE key IN ('nav_collapsed', 'friday_visible')")
+    placeholders = ", ".join(["%s"] * len(_KEYS))
+    rows = query(f"SELECT key, value FROM settings WHERE key IN ({placeholders})", _KEYS)
     prefs = DEFAULT_PREFS.copy()
     for row in rows:
         prefs[row["key"]] = row["value"]

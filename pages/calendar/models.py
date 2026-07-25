@@ -68,13 +68,19 @@ def _raw(event_id: int):
     return query("SELECT * FROM events WHERE id = %s", (event_id,), one=True)
 
 
+def _naive(value):
+    """Parse an ISO string to a tz-naive datetime (the app stores local wall time)."""
+    dt = isoparse(value) if isinstance(value, str) else value
+    return dt.replace(tzinfo=None)
+
+
 def _expand(master: dict, start: str, end: str) -> list[dict]:
     """Yield occurrence dicts for a recurring master within [start, end]."""
-    dtstart = isoparse(master["start_at"])
+    dtstart = _naive(master["start_at"])
     rule = rrulestr(master["rrule"], dtstart=dtstart)
-    win_start, win_end = isoparse(start), isoparse(end)
+    win_start, win_end = _naive(start), _naive(end)
     skip = set((master.get("exdates") or "").split(",")) if master.get("exdates") else set()
-    duration = (isoparse(master["end_at"]) - dtstart) if master.get("end_at") else None
+    duration = (_naive(master["end_at"]) - dtstart) if master.get("end_at") else None
     out = []
     for occ in rule.between(win_start, win_end, inc=True):
         iso = occ.isoformat()
