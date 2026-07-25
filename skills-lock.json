@@ -7,6 +7,12 @@
       "skillPath": "skills/design-motion-principles/SKILL.md",
       "computedHash": "ca263e4515ddd34e412c841a2b35c2898a2a2122744836fdd003f0a2552192d6"
     },
+    "i-have-adhd": {
+      "source": "ayghri/i-have-adhd",
+      "sourceType": "github",
+      "skillPath": "skills/i-have-adhd/SKILL.md",
+      "computedHash": "177e5b780239a1a819d9eb00d512b6af44ecc7792f4cdcb1e5fb6f03c74a8ee4"
+    },
     "web-audio-api": {
       "source": "martinholovsky/claude-skills-generator",
       "sourceType": "github",
