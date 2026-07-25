@@ -14,6 +14,18 @@ class LLMError(RuntimeError):
     """Any failure reaching or parsing the DeepSeek response."""
 
 
+def _http_detail(e: "urllib.error.HTTPError") -> str:
+    """Pull the provider's error message out of an HTTPError body if we can."""
+    try:
+        payload = json.loads(e.read().decode("utf-8"))
+        msg = payload.get("error", {}).get("message")
+        if msg:
+            return f"{e.code} {msg}"
+    except Exception:
+        pass
+    return f"{e.code} {e.reason}"
+
+
 class DeepSeekClient:
     def __init__(self, api_key=None, base_url=None, model=None):
         cfg = current_app.config
@@ -40,6 +52,10 @@ class DeepSeekClient:
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            # The response body carries the provider's real reason (e.g. bad model);
+            # e.reason alone is just "Bad Request". Surface the body when present.
+            raise LLMError(_http_detail(e))
         except urllib.error.URLError as e:
             raise LLMError(str(getattr(e, "reason", e)))
         except (ValueError, KeyError) as e:
