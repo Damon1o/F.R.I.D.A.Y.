@@ -23,6 +23,15 @@ def message():
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+@friday_bp.route("/api/quickadd", methods=["POST"])
+def quickadd():
+    """Spec K — natural-language quick-add: run the text through the agent loop."""
+    text = (request.get_json(silent=True) or {}).get("text", "").strip()
+    if not text:
+        return jsonify({"error": "empty message"}), 400
+    return jsonify(agent.run_text(text))
+
+
 @friday_bp.route("/api/friday/history", methods=["GET"])
 def history():
     shown = [{"role": m["role"], "content": m["content"]}

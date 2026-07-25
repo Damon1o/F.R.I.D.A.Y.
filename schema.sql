@@ -25,6 +25,12 @@ CREATE TABLE IF NOT EXISTS todos (
     completed_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS notes (
+    id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    text       TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+);
+
 CREATE TABLE IF NOT EXISTS messages (
     id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     role         TEXT NOT NULL,

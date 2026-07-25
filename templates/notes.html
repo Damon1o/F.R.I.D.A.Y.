@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Notes · F.R.I.D.A.Y.{% endblock %}
+{% block topbar %}Notes{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="display">Remembered</h1>
+    <p class="subtle">Things F.R.I.D.A.Y. is holding onto for you.</p>
+  </div>
+</section>
+
+<section class="card glass">
+  <ul class="task-list" id="notes-list">
+    {% for n in notes %}
+    <li data-id="{{ n.id }}">
+      <span class="task-title">{{ n.text }}</span>
+      <span class="task-due">{{ n.created_at[:16].replace('T', ' ') }}</span>
+      <button class="icon-btn danger" data-delete aria-label="Delete">{{ icon('trash-2', 16) }}</button>
+    </li>
+    {% else %}
+    <li class="empty">Nothing remembered yet. Tell F.R.I.D.A.Y. to remember something.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

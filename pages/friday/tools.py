@@ -3,10 +3,14 @@
 No DB logic here — every tool wraps a calendar/todo model call. A tool that raises
 ValidationError returns {"error": ...} so the LLM can self-correct mid-turn.
 """
+from dataclasses import asdict
+
 from pages.calendar import models as events
 from pages.calendar.models import ValidationError
 from pages.todos import models as todos
+from pages.notes import models as notes
 from pages.music import get_provider
+from pages.friday import weather
 
 _DT = "ISO-8601 datetime, e.g. 2026-07-24T15:00:00. Assume the user's local time."
 
@@ -76,6 +80,20 @@ TOOLS = [
     _fn("play_track", "Search and play a track by name/artist.", {
         "query": {"type": "string"},
     }, ["query"]),
+    _fn("get_now_playing", "Get the currently playing track (title, artist, progress).", {}, []),
+    _fn("get_weather", "Get current weather and a short forecast. Omit location for the user's home.", {
+        "location": {"type": "string", "description": "City/place name; optional."},
+    }, []),
+    _fn("remember", "Store a free-form note/fact the user wants remembered.", {
+        "text": {"type": "string"},
+    }, ["text"]),
+    _fn("recall", "Search remembered notes for ones matching a query.", {
+        "query": {"type": "string"},
+    }, ["query"]),
+    _fn("list_notes", "List all remembered notes.", {}, []),
+    _fn("delete_note", "Delete a remembered note by id.", {
+        "note_id": {"type": "integer"},
+    }, ["note_id"]),
 ]
 
 
@@ -106,6 +124,20 @@ def dispatch(name: str, args: dict):
             return {"ok": get_provider().control(args["action"], args.get("position_ms"))}
         if name == "play_track":
             return {"playing": get_provider().play_track(args["query"])}
+        if name == "get_now_playing":
+            track = get_provider().get_now_playing()
+            return asdict(track) if track else {"playing": False}
+        if name == "get_weather":
+            return weather.get_weather(args.get("location"))
+        if name == "remember":
+            return notes.create_note(args["text"])
+        if name == "recall":
+            return notes.search_notes(args["query"])
+        if name == "list_notes":
+            return notes.list_notes()
+        if name == "delete_note":
+            ok = notes.delete_note(args["note_id"])
+            return {"deleted": ok} if ok else {"error": "note not found"}
         return {"error": f"unknown tool {name}"}
     except ValidationError as e:
         return {"error": str(e)}
