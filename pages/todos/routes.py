@@ -16,7 +16,12 @@ def todos_page():
 def todos_list():
     done = request.args.get("done")
     done = None if done is None else done == "1"
-    return jsonify(models.list_todos(done=done))
+    return jsonify(models.list_todos(done=done, tag=request.args.get("tag")))
+
+
+@todos_bp.route("/api/tags", methods=["GET"])
+def tags_list():
+    return jsonify(models.list_tags())
 
 
 @todos_bp.route("/api/todos", methods=["POST"])

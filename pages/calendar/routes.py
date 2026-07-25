@@ -37,3 +37,12 @@ def events_update(event_id):
 @calendar_bp.route("/api/events/<int:event_id>", methods=["DELETE"])
 def events_delete(event_id):
     return ("", 204) if models.delete_event(event_id) else (jsonify({"error": "not found"}), 404)
+
+
+@calendar_bp.route("/api/events/<int:event_id>/skip", methods=["POST"])
+def events_skip(event_id):
+    """Spec L — hide one occurrence of a recurring event (EXDATE)."""
+    occ = (request.get_json(silent=True) or {}).get("occurrence")
+    if not occ:
+        return jsonify({"error": "occurrence is required"}), 400
+    return ("", 204) if models.skip_occurrence(event_id, occ) else (jsonify({"error": "not found or not recurring"}), 404)

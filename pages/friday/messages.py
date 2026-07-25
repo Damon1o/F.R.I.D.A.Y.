@@ -17,10 +17,22 @@ def history() -> list[dict]:
     return [dict(r) for r in query("SELECT * FROM messages ORDER BY id")]
 
 
-def to_api() -> list[dict]:
-    """Rebuild the OpenAI-shaped message list for replay to DeepSeek."""
+def to_api(limit=None) -> list[dict]:
+    """Rebuild the OpenAI-shaped message list for replay to DeepSeek.
+
+    Spec P — `limit` bounds the voice/chat context to the last N stored rows so the
+    prompt stays small on long threads. The window is snapped forward to the first
+    `user` turn so the replayed sequence is always valid (no orphan tool messages).
+    """
+    rows = list(query("SELECT * FROM messages ORDER BY id"))
+    if limit:
+        rows = rows[-limit:]
+        for i, r in enumerate(rows):
+            if r["role"] == "user":
+                rows = rows[i:]
+                break
     out = []
-    for r in query("SELECT * FROM messages ORDER BY id"):
+    for r in rows:
         if r["role"] == "tool":
             out.append({"role": "tool", "tool_call_id": r["tool_call_id"],
                         "name": r["name"], "content": r["content"] or ""})

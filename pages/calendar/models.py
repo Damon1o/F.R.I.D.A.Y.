@@ -1,9 +1,13 @@
 """Event row <-> dict, validation, and DB queries."""
 from datetime import datetime
 
+from dateutil.parser import isoparse
+from dateutil.rrule import rrulestr
+
+from core import undo
 from core.db import execute, query
 
-FIELDS = ("title", "start_at", "end_at", "all_day", "location", "notes")
+FIELDS = ("title", "start_at", "end_at", "all_day", "location", "notes", "rrule")
 
 
 class ValidationError(ValueError):
@@ -38,6 +42,16 @@ def _clean(data: dict, *, partial: bool) -> dict:
             raise ValidationError("end_at must be on or after start_at")
     if "all_day" in data:
         out["all_day"] = 1 if data["all_day"] else 0
+    if "rrule" in data:
+        rr = (data["rrule"] or "").strip()
+        if rr:
+            try:
+                rrulestr(rr, dtstart=isoparse(out.get("start_at") or data.get("start_at")))
+            except (ValueError, TypeError):
+                raise ValidationError("rrule must be a valid RFC-5545 RRULE")
+            out["rrule"] = rr
+        else:
+            out["rrule"] = None
     for f in ("location", "notes"):
         if f in data:
             out[f] = data[f] or None
@@ -50,9 +64,34 @@ def to_dict(row) -> dict:
     return d
 
 
+def _raw(event_id: int):
+    return query("SELECT * FROM events WHERE id = %s", (event_id,), one=True)
+
+
+def _expand(master: dict, start: str, end: str) -> list[dict]:
+    """Yield occurrence dicts for a recurring master within [start, end]."""
+    dtstart = isoparse(master["start_at"])
+    rule = rrulestr(master["rrule"], dtstart=dtstart)
+    win_start, win_end = isoparse(start), isoparse(end)
+    skip = set((master.get("exdates") or "").split(",")) if master.get("exdates") else set()
+    duration = (isoparse(master["end_at"]) - dtstart) if master.get("end_at") else None
+    out = []
+    for occ in rule.between(win_start, win_end, inc=True):
+        iso = occ.isoformat()
+        if iso in skip:
+            continue
+        d = to_dict(master)
+        d["start_at"] = iso
+        if duration is not None:
+            d["end_at"] = (occ + duration).isoformat()
+        d["occurrence_of"] = master["id"]
+        out.append(d)
+    return out
+
+
 def list_events(start=None, end=None) -> list[dict]:
-    sql = "SELECT * FROM events"
-    params, where = [], []
+    # Non-recurring rows: window-filtered as before.
+    sql, params, where = "SELECT * FROM events WHERE rrule IS NULL", [], []
     if start:
         where.append("start_at >= %s")
         params.append(start)
@@ -60,13 +99,19 @@ def list_events(start=None, end=None) -> list[dict]:
         where.append("start_at <= %s")
         params.append(end)
     if where:
-        sql += " WHERE " + " AND ".join(where)
-    sql += " ORDER BY start_at"
-    return [to_dict(r) for r in query(sql, params)]
+        sql += " AND " + " AND ".join(where)
+    rows = [to_dict(r) for r in query(sql, params)]
+
+    # Recurring masters: expand within the window if one is given, else return as-is.
+    masters = [dict(r) for r in query("SELECT * FROM events WHERE rrule IS NOT NULL")]
+    for m in masters:
+        rows.extend(_expand(m, start, end) if (start and end) else [to_dict(m)])
+
+    return sorted(rows, key=lambda e: e["start_at"])
 
 
 def get_event(event_id: int):
-    row = query("SELECT * FROM events WHERE id = %s", (event_id,), one=True)
+    row = _raw(event_id)
     return to_dict(row) if row else None
 
 
@@ -77,15 +122,18 @@ def create_event(data: dict) -> dict:
         f"INSERT INTO events ({','.join(cols)}) VALUES ({','.join(['%s'] * len(cols))}) RETURNING id",
         [fields[c] for c in cols],
     ).fetchone()
+    undo.record("delete", "events", row["id"])
     return get_event(row["id"])
 
 
 def update_event(event_id: int, data: dict):
-    if get_event(event_id) is None:
+    prior = _raw(event_id)
+    if prior is None:
         return None
     fields = _clean(data, partial=True)
     if fields:
         cols = list(fields)
+        undo.record("update", "events", event_id, {c: dict(prior)[c] for c in cols})
         execute(
             f"UPDATE events SET {','.join(f'{c}=%s' for c in cols)} WHERE id = %s",
             [fields[c] for c in cols] + [event_id],
@@ -93,5 +141,23 @@ def update_event(event_id: int, data: dict):
     return get_event(event_id)
 
 
+def skip_occurrence(event_id: int, occ_iso: str) -> bool:
+    """Spec L — hide a single occurrence of a recurring event by adding it to EXDATE."""
+    row = _raw(event_id)
+    if row is None or not row["rrule"]:
+        return False
+    occ = isoparse(occ_iso).isoformat()
+    exdates = [d for d in (row["exdates"] or "").split(",") if d]
+    if occ not in exdates:
+        exdates.append(occ)
+        undo.record("update", "events", event_id, {"exdates": row["exdates"]})
+        execute("UPDATE events SET exdates = %s WHERE id = %s", (",".join(exdates), event_id))
+    return True
+
+
 def delete_event(event_id: int) -> bool:
+    row = _raw(event_id)
+    if row is None:
+        return False
+    undo.record("restore", "events", None, dict(row))
     return execute("DELETE FROM events WHERE id = %s", (event_id,)).rowcount > 0

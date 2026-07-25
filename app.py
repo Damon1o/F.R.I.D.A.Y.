@@ -63,8 +63,9 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     from pages.voice.routes import voice_bp
     from pages.music.routes import music_bp
     from pages.notes.routes import notes_bp
+    from pages.search.routes import search_bp
 
-    for bp in (dashboard_bp, calendar_bp, todos_bp, settings_bp, friday_bp, voice_bp, music_bp, notes_bp):
+    for bp in (dashboard_bp, calendar_bp, todos_bp, settings_bp, friday_bp, voice_bp, music_bp, notes_bp, search_bp):
         app.register_blueprint(bp)
 
     return app

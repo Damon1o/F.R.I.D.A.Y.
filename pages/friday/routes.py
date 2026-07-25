@@ -3,9 +3,16 @@ import json
 
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
+from core import undo
 from pages.friday import agent, messages
 
 friday_bp = Blueprint("friday", __name__)
+
+
+@friday_bp.route("/api/undo", methods=["POST"])
+def undo_last():
+    """Spec S — reverse the last data mutation."""
+    return jsonify(undo.undo())
 
 
 def _sse(frames):

@@ -20,7 +20,7 @@ def app():
         from core import db
         db.init_db()
         conn = db.get_db()
-        conn.execute("TRUNCATE settings, events, todos, notes, messages RESTART IDENTITY CASCADE")
+        conn.execute("TRUNCATE settings, events, todos, notes, messages, undo_log RESTART IDENTITY CASCADE")
         conn.commit()
     return app
 

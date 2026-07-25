@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Search · F.R.I.D.A.Y.{% endblock %}
+{% block topbar %}Search{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="display">Search</h1>
+    <p class="subtle">Across events, tasks, and notes.</p>
+  </div>
+</section>
+
+<section class="card glass">
+  <form class="quick-add wide" method="get" action="/search">
+    <input name="q" value="{{ q }}" placeholder="Search everything…" autocomplete="off" autofocus>
+    <button class="btn-primary" type="submit">{{ icon('search', 18) }} Search</button>
+  </form>
+
+  {% if results is not none %}
+    {% for group, items in [('Events', results.events), ('Tasks', results.todos), ('Notes', results.notes)] %}
+      <h2 class="subtle" style="margin-top:1rem">{{ group }}</h2>
+      <ul class="task-list">
+        {% for it in items %}
+        <li><span class="task-title">{{ it.title if it.title is defined else it.text }}</span></li>
+        {% else %}
+        <li class="empty">No {{ group|lower }} matched.</li>
+        {% endfor %}
+      </ul>
+    {% endfor %}
+  {% endif %}
+</section>
+{% endblock %}

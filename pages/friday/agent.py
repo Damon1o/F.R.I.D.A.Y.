@@ -6,6 +6,7 @@ from pages.friday import messages
 from pages.friday.tools import TOOLS, dispatch
 
 MAX_STEPS = 6  # guard against a runaway tool loop
+CONTEXT_WINDOW = 24  # Spec P — cap replayed history so long threads keep a small prompt
 
 
 def _system() -> dict:
@@ -44,7 +45,7 @@ def run_turn(user_text: str, client=None):
     # yielding during GeneratorExit raises RuntimeError. "done" is emitted on the normal path.
     try:
         for _ in range(MAX_STEPS):
-            msg = client.complete([_system(), *messages.to_api()], TOOLS)
+            msg = client.complete([_system(), *messages.to_api(limit=CONTEXT_WINDOW)], TOOLS)
             tool_calls = msg.get("tool_calls")
             if tool_calls:
                 messages.add("assistant", msg.get("content"), tool_calls=tool_calls)
@@ -91,7 +92,7 @@ def run_text(user_text: str, client=None) -> dict:
     actions: list[str] = []
     try:
         for _ in range(MAX_STEPS):
-            msg = client.complete([_system(), *messages.to_api()], TOOLS)
+            msg = client.complete([_system(), *messages.to_api(limit=CONTEXT_WINDOW)], TOOLS)
             tool_calls = msg.get("tool_calls")
             if tool_calls:
                 messages.add("assistant", msg.get("content"), tool_calls=tool_calls)

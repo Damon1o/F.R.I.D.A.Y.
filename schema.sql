@@ -40,3 +40,18 @@ CREATE TABLE IF NOT EXISTS messages (
     name         TEXT,
     created_at   TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
 );
+
+-- Spec R: single tag per todo (Option A). Spec L: recurrence rule + skipped dates.
+ALTER TABLE todos  ADD COLUMN IF NOT EXISTS tag     TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS rrule   TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS exdates TEXT;
+
+-- Spec S: single-level undo. One row (id = 1) holds the inverse of the last mutation.
+CREATE TABLE IF NOT EXISTS undo_log (
+    id           INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    op           TEXT NOT NULL,
+    target_table TEXT NOT NULL,
+    row_id       BIGINT,
+    payload      TEXT,
+    created_at   TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+);
