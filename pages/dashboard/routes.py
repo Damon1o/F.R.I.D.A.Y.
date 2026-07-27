@@ -4,11 +4,13 @@ All data is computed here (no client JS). The bar chart is CSS heights; the line
 chart is a server-built SVG polyline. Adding events/tasks lives on their own pages
 and in the F.R.I.D.A.Y. panel — the dashboard only displays.
 """
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
-from flask import Blueprint, render_template
+from flask import Blueprint, jsonify, render_template
 
+from core.clock import now, to_local, tz
 from pages.calendar.models import list_events
+from pages.friday.weather import get_weather
 from pages.todos.models import list_todos
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -22,7 +24,7 @@ def _day_of(iso: str) -> str:
         return ""
     dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
     if dt.tzinfo:
-        dt = dt.astimezone()
+        dt = to_local(dt)
     return dt.date().isoformat()
 
 
@@ -33,34 +35,38 @@ def _bars(counts: list[int]) -> list[dict]:
 
 @dashboard_bp.route("/")
 def index():
-    today = date.today()
-    now = datetime.now()
+    user_now = now()
+    today = user_now.date()
+    user_tz = tz()
 
-    start = datetime.combine(today, datetime.min.time()).isoformat()
-    end = datetime.combine(today, datetime.max.time()).isoformat()
+    # Start/end of today in user's timezone, as ISO strings for list_events (which stores local wall time)
+    start = datetime.combine(today, datetime.min.time()).replace(tzinfo=user_tz).isoformat()
+    end = datetime.combine(today, datetime.max.time()).replace(tzinfo=user_tz).isoformat()
     events_today = list_events(start=start, end=end)
     open_todos = list_todos(done=False)
     all_todos = list_todos()
 
-    overdue = sum(1 for t in open_todos if t["due_at"] and t["due_at"] < now.isoformat())
+    # Overdue: due_at < now (both in user tz; due_at stored as local wall time)
+    overdue = sum(1 for t in open_todos if t["due_at"] and t["due_at"] < user_now.isoformat())
     due_today = sum(1 for t in open_todos if _day_of(t["due_at"]) == today.isoformat())
 
-    # This week (Mon..Sun): events scheduled per weekday.
+    # This week (Mon..Sun) in user tz
     monday = today - timedelta(days=today.weekday())
     week_days = [monday + timedelta(days=i) for i in range(7)]
-    week_events = list_events(
-        start=monday.isoformat(),
-        end=datetime.combine(week_days[-1], datetime.max.time()).isoformat(),
-    )
-    events_by_day = [sum(1 for e in week_events if _day_of(e["start_at"]) == d.isoformat())
-                     for d in week_days]
+    week_start = datetime.combine(monday, datetime.min.time()).replace(tzinfo=user_tz).isoformat()
+    week_end = datetime.combine(week_days[-1], datetime.max.time()).replace(tzinfo=user_tz).isoformat()
+    week_events = list_events(start=week_start, end=week_end)
+    events_by_day = [
+        sum(1 for e in week_events if _day_of(e["start_at"]) == d.isoformat())
+        for d in week_days
+    ]
 
-    # Last 7 days (rolling): tasks completed.
+    # Last 7 days (rolling): tasks completed
     last7 = {(today - timedelta(days=i)).isoformat() for i in range(7)}
     completed_week = sum(1 for t in all_todos if _day_of(t["completed_at"]) in last7)
 
-    # Next events from now onward.
-    upcoming = list_events(start=now.isoformat())[:6]
+    # Next events from now onward
+    upcoming = list_events(start=user_now.isoformat())[:6]
 
     return render_template(
         "dashboard.html",
@@ -80,3 +86,9 @@ def index():
         ],
         upcoming=upcoming,
     )
+
+
+@dashboard_bp.route("/api/weather")
+def weather_api():
+    """Current weather + 3-day forecast via Open-Meteo (keyless)."""
+    return jsonify(get_weather())

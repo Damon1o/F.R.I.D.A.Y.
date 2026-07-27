@@ -1,5 +1,6 @@
 """Todo row <-> dict, validation, and DB queries."""
 from datetime import datetime, timezone
+from flask import g
 
 from core import undo
 from core.db import execute, query
@@ -57,7 +58,7 @@ def create_todo(data: dict) -> dict:
         "INSERT INTO todos (title, due_at, notes, tag) VALUES (%s, %s, %s, %s) RETURNING id",
         (title, due_at or None, data.get("notes") or None, data.get("tag") or None),
     ).fetchone()
-    undo.record("delete", "todos", row["id"])
+    undo.record("delete", "todos", row["id"], session_id=getattr(g, "session_id", "default"))
     return get_todo(row["id"])
 
 
@@ -98,7 +99,7 @@ def update_todo(todo_id: int, data: dict):
         params.append(_now() if done and not current["done"] else (None if not done else current["completed_at"]))
         changed.append("completed_at")
     if sets:
-        undo.record("update", "todos", todo_id, {c: prior[c] for c in changed})
+        undo.record("update", "todos", todo_id, {c: prior[c] for c in changed}, session_id=getattr(g, "session_id", "default"))
         execute(f"UPDATE todos SET {','.join(sets)} WHERE id = %s", params + [todo_id])
     return get_todo(todo_id)
 
@@ -107,5 +108,5 @@ def delete_todo(todo_id: int) -> bool:
     row = _raw(todo_id)
     if row is None:
         return False
-    undo.record("restore", "todos", None, dict(row))
+    undo.record("restore", "todos", None, dict(row), session_id=getattr(g, "session_id", "default"))
     return execute("DELETE FROM todos WHERE id = %s", (todo_id,)).rowcount > 0

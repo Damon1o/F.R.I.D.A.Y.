@@ -39,4 +39,6 @@ def client(app):
 def ctx(app):
     """App context for calling model functions directly."""
     with app.app_context():
-        yield
+        # Push a test request context so g.session_id is set (default session)
+        with app.test_request_context():
+            yield

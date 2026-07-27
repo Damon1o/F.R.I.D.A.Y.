@@ -1,9 +1,10 @@
 """F.R.I.D.A.Y. — Flask app factory. Server-rendered Jinja + Postgres via psycopg, no build step."""
 import re
+import uuid
 from functools import lru_cache
 from pathlib import Path
 
-from flask import Flask
+from flask import Flask, g, request
 from markupsafe import Markup
 
 from config import Config
@@ -11,6 +12,7 @@ from core import db
 
 LUCIDE_DIR = Path(__file__).resolve().parent / "static" / "vendor" / "lucide"
 LOGO_PATH = Path(__file__).resolve().parent / "static" / "images" / "friday.svg"
+SESSION_COOKIE = "friday_session"
 
 
 @lru_cache(maxsize=64)
@@ -45,6 +47,15 @@ def render_logo(cls: str = "") -> Markup:
     return Markup(raw)
 
 
+def _get_session_id() -> str:
+    """Return or create a session_id for this request (stored in cookie)."""
+    sid = request.cookies.get(SESSION_COOKIE)
+    if not sid:
+        sid = uuid.uuid4().hex[:16]
+    g.session_id = sid
+    return sid
+
+
 def create_app(config_overrides: dict | None = None) -> Flask:
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -54,6 +65,16 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     db.init_app(app)
     app.jinja_env.globals["icon"] = render_icon
     app.jinja_env.globals["logo"] = render_logo
+
+    @app.before_request
+    def _ensure_session():
+        _get_session_id()
+
+    @app.after_request
+    def _set_session_cookie(resp):
+        if hasattr(g, "session_id"):
+            resp.set_cookie(SESSION_COOKIE, g.session_id, max_age=31536000, httponly=True, samesite="Lax")
+        return resp
 
     from pages.dashboard.routes import dashboard_bp
     from pages.calendar.routes import calendar_bp

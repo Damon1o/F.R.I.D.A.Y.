@@ -1,4 +1,5 @@
 """Spec I — free-form notes FRIDAY can remember + recall. ILIKE search (single user)."""
+from flask import g
 from core import undo
 from core.db import execute, query
 from pages.calendar.models import ValidationError
@@ -22,7 +23,7 @@ def create_note(text: str) -> dict:
     if not text:
         raise ValidationError("text is required")
     row = execute("INSERT INTO notes (text) VALUES (%s) RETURNING id", (text,)).fetchone()
-    undo.record("delete", "notes", row["id"])
+    undo.record("delete", "notes", row["id"], session_id=getattr(g, "session_id", "default"))
     return get_note(row["id"])
 
 
@@ -41,5 +42,5 @@ def delete_note(note_id: int) -> bool:
     row = query("SELECT * FROM notes WHERE id = %s", (note_id,), one=True)
     if row is None:
         return False
-    undo.record("restore", "notes", None, dict(row))
+    undo.record("restore", "notes", None, dict(row), session_id=getattr(g, "session_id", "default"))
     return execute("DELETE FROM notes WHERE id = %s", (note_id,)).rowcount > 0

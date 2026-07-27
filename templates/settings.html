@@ -19,8 +19,9 @@
       <p class="subtle">When enabled, the left rail collapses to icons only. Hover to expand.</p>
     </div>
     <button class="btn-primary toggle-btn" type="button" id="nav-auto-collapse" data-pref="nav_collapsed"
-      aria-pressed="false">
-      <span class="toggle-on">On</span><span class="toggle-off">Off</span>
+      aria-pressed="{{ 'true' if prefs.nav_collapsed == 'true' else 'false' }}">
+      <span class="toggle-on" style="display: {{ 'none' if prefs.nav_collapsed != 'true' else '' }}">On</span>
+      <span class="toggle-off" style="display: {{ 'none' if prefs.nav_collapsed == 'true' else '' }}">Off</span>
     </button>
   </div>
 
@@ -41,8 +42,9 @@
       <p class="subtle">When disabled, the right panel hides. Click the arrow button on the topbar to slide it out.</p>
     </div>
     <button class="btn-primary toggle-btn" type="button" id="friday-visible" data-pref="friday_visible"
-      aria-pressed="true">
-      <span class="toggle-on">On</span><span class="toggle-off">Off</span>
+      aria-pressed="{{ 'true' if prefs.friday_visible == 'true' else 'false' }}">
+      <span class="toggle-on" style="display: {{ 'none' if prefs.friday_visible != 'true' else '' }}">On</span>
+      <span class="toggle-off" style="display: {{ 'none' if prefs.friday_visible == 'true' else '' }}">Off</span>
     </button>
   </div>
 
@@ -60,8 +62,9 @@
         Runs entirely in the browser; needs microphone permission.</p>
     </div>
     <button class="btn-primary toggle-btn" type="button" id="wake-word" data-pref="wake_word"
-      aria-pressed="false">
-      <span class="toggle-on">On</span><span class="toggle-off">Off</span>
+      aria-pressed="{{ 'true' if prefs.wake_word == 'true' else 'false' }}">
+      <span class="toggle-on" style="display: {{ 'none' if prefs.wake_word != 'true' else '' }}">On</span>
+      <span class="toggle-off" style="display: {{ 'none' if prefs.wake_word == 'true' else '' }}">Off</span>
     </button>
   </div>
 
@@ -105,17 +108,64 @@
 </section>
 
 <section class="card glass settings-group">
-  <h3>Profile</h3>
-  <label class="field">Display name <input placeholder="You" disabled></label>
-  <label class="field">Timezone <input value="Local (browser)" disabled></label>
-  <p class="subtle">Profile editing arrives with the assistant phases.</p>
+  <h3>{{ icon('user', 18) }} Profile</h3>
+  <p class="subtle">F.R.I.D.A.Y. uses these when talking to you and when resolving dates like &ldquo;tomorrow&rdquo;.</p>
+
+  <label class="field">What to call me
+    <input id="pref-user-name" data-pref="user_name" placeholder="Boss" autocomplete="off">
+  </label>
+  <label class="field">Birthday
+    <input id="pref-birthday" data-pref="birthday" type="date">
+  </label>
+  <label class="field">Timezone
+    <select id="pref-timezone" data-pref="timezone"></select>
+  </label>
+
+  <div class="setting-row">
+    <p class="subtle" id="profile-status">&nbsp;</p>
+    <button class="btn-primary" type="button" id="profile-save">Save</button>
+  </div>
+</section>
+
+{# ---- Location & Units ---- #}
+<section class="card glass settings-group">
+  <h3>{{ icon('map-pin', 18) }} Location & Units</h3>
+  <p class="subtle">Used for weather on the Dashboard. Click to detect your location automatically.</p>
+
+  <div class="setting-row">
+    <div>
+      <strong>Detected location</strong>
+      <p class="subtle" id="location-status">Not set</p>
+    </div>
+    <button class="btn-primary" type="button" id="detect-location">{{ icon('crosshair', 18) }} Detect Location</button>
+  </div>
+
+  <div class="setting-row" id="location-details" style="display:none;">
+    <div style="flex:1;">
+      <strong id="location-name">—</strong>
+      <p class="subtle" id="location-coords">—</p>
+    </div>
+    <button class="btn-primary" type="button" id="clear-location">Clear</button>
+  </div>
+
+  <div class="setting-row">
+    <div>
+      <strong>Temperature units</strong>
+      <p class="subtle">Choose Celsius or Fahrenheit for the weather widget.</p>
+    </div>
+    <button class="btn-primary toggle-btn" type="button" id="units-toggle" data-pref="units"
+      aria-pressed="{{ 'true' if prefs.units == 'imperial' else 'false' }}">
+      <span class="toggle-on" style="display: {{ 'none' if prefs.units != 'imperial' else '' }}">°F</span>
+      <span class="toggle-off" style="display: {{ 'none' if prefs.units == 'imperial' else '' }}">°C</span>
+    </button>
+  </div>
 </section>
 
 <section class="card glass settings-group">
   <h3>About</h3>
   <div class="setting-row">
     <div><strong>F.R.I.D.A.Y.</strong>
-      <p class="subtle">Phase 1 (Core) — manual productivity, no AI yet.</p>
+      <p class="subtle">Calendar, tasks, notes, and the F.R.I.D.A.Y. voice assistant.</p>
     </div>
     <span class="pill">v0.1</span>
   </div>
@@ -189,6 +239,39 @@
   const scoreOut = document.getElementById('wake-score');
   window.addEventListener('wake-score', (e) => { scoreOut.textContent = e.detail.score.toFixed(3); });
 
+  // ---- Profile: name / birthday / timezone ----
+  const profileFields = ['pref-user-name', 'pref-birthday', 'pref-timezone'].map(id => document.getElementById(id));
+  const tzSelect = document.getElementById('pref-timezone');
+  const status = document.getElementById('profile-status');
+
+  // Zone list comes from the browser's own tz database — nothing to vendor or keep in sync.
+  const zones = Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : [];
+  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  for (const z of zones.length ? zones : [browserTz]) {
+    tzSelect.add(new Option(z.replace(/_/g, ' '), z));
+  }
+
+  fetch('/api/settings/ui').then(r => r.json()).then(data => {
+    for (const el of profileFields) el.value = data[el.dataset.pref] || '';
+    if (!tzSelect.value) tzSelect.value = browserTz;
+  }).catch(() => {});
+
+  document.getElementById('profile-save').addEventListener('click', async () => {
+    const body = Object.fromEntries(profileFields.map(el => [el.dataset.pref, el.value]));
+    status.textContent = 'Saving…';
+    try {
+      const res = await fetch('/api/settings/ui', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      status.textContent = res.ok ? 'Saved.' : (data.error || 'Save failed.');
+    } catch (e) {
+      status.textContent = 'Save failed.';
+    }
+  });
+
   document.getElementById('settings-theme')?.addEventListener('click', () => {
     document.getElementById('theme-toggle')?.click();
   });
@@ -249,5 +332,124 @@
   });
 
   checkMusicStatus();
+
+  // ---- Location & Units ----
+  const locStatus = document.getElementById('location-status');
+  const locDetails = document.getElementById('location-details');
+  const locName = document.getElementById('location-name');
+  const locCoords = document.getElementById('location-coords');
+  const detectBtn = document.getElementById('detect-location');
+  const clearBtn = document.getElementById('clear-location');
+  const unitsToggle = document.getElementById('units-toggle');
+  // Keep the server-rendered icon markup; re-interpolating icon() inside a JS
+  // string literal breaks the script (Lucide SVGs are multi-line).
+  const detectLabel = detectBtn.innerHTML;
+
+  // Load saved location from server settings
+  async function loadLocation() {
+    try {
+      const res = await fetch('/api/settings/ui');
+      const data = await res.json();
+      if (data.home_lat && data.home_lon) {
+        locName.textContent = data.home_name || 'Saved location';
+        locCoords.textContent = `${Number(data.home_lat).toFixed(4)}, ${Number(data.home_lon).toFixed(4)}`;
+        locStatus.textContent = 'Saved';
+        locDetails.style.display = 'flex';
+      }
+      // Units
+      const isImperial = data.units === 'imperial';
+      unitsToggle.setAttribute('aria-pressed', String(isImperial));
+      unitsToggle.querySelector('.toggle-on').style.display = isImperial ? '' : 'none';
+      unitsToggle.querySelector('.toggle-off').style.display = isImperial ? 'none' : '';
+      localStorage.setItem('friday_units', isImperial ? 'imperial' : 'metric');
+    } catch (e) {
+      console.error('Load location failed', e);
+    }
+  }
+
+  // Geolocation detect
+  detectBtn.addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation not supported in this browser.');
+      return;
+    }
+    detectBtn.disabled = true;
+    detectBtn.textContent = 'Detecting…';
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        // Reverse geocode via Open-Meteo
+        try {
+          const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?latitude=${latitude}&longitude=${longitude}&count=1&language=en`);
+          const data = await res.json();
+          const name = data.results?.[0]?.name || 'Current location';
+          // Save to server
+          await fetch('/api/settings/ui', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              home_lat: String(latitude),
+              home_lon: String(longitude),
+              home_name: name,
+            }),
+          });
+          locName.textContent = name;
+          locCoords.textContent = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          locStatus.textContent = 'Saved';
+          locDetails.style.display = 'flex';
+        } catch (e) {
+          console.error(e);
+          alert('Failed to save location.');
+        } finally {
+          detectBtn.disabled = false;
+          detectBtn.innerHTML = detectLabel;
+        }
+      },
+      (err) => {
+        alert('Location permission denied or unavailable.');
+        detectBtn.disabled = false;
+        detectBtn.innerHTML = detectLabel;
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+
+  // Clear location
+  clearBtn.addEventListener('click', async () => {
+    if (!confirm('Clear saved location? Weather will stop working until you set it again.')) return;
+    try {
+      await fetch('/api/settings/ui', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ home_lat: '', home_lon: '', home_name: '' }),
+      });
+      locStatus.textContent = 'Not set';
+      locDetails.style.display = 'none';
+    } catch (e) {
+      alert('Failed to clear location.');
+    }
+  });
+
+  // Units toggle
+  unitsToggle.addEventListener('click', async () => {
+    const next = unitsToggle.getAttribute('aria-pressed') !== 'true';
+    unitsToggle.setAttribute('aria-pressed', String(next));
+    unitsToggle.querySelector('.toggle-on').style.display = next ? '' : 'none';
+    unitsToggle.querySelector('.toggle-off').style.display = next ? 'none' : '';
+    localStorage.setItem('friday_units', next ? 'imperial' : 'metric');
+    try {
+      await fetch('/api/settings/ui', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ units: next ? 'imperial' : 'metric' }),
+      });
+    } catch (e) {
+      console.error('Save units failed', e);
+    }
+    // Notify widgets
+    window.dispatchEvent(new StorageEvent('storage', { key: 'friday_units', newValue: next ? 'imperial' : 'metric' }));
+  });
+
+  loadLocation();
 </script>
 {% endblock %}

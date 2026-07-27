@@ -3,6 +3,35 @@
 {% block topbar %}Dashboard{% endblock %}
 
 {% block content %}
+{# ---- Top widget bar: live clock, date, weather ---- #}
+<section class="widget-bar" aria-label="Dashboard widgets">
+  <div class="widget glass" data-widget="clock" aria-live="polite">
+    <span class="widget-icon">{{ icon('clock', 18) }}</span>
+    <div class="widget-content">
+      <div class="widget-value" data-clock>--:--:--</div>
+      <div class="widget-label">Live Clock</div>
+    </div>
+  </div>
+  <div class="widget glass" data-widget="date">
+    <span class="widget-icon">{{ icon('calendar', 18) }}</span>
+    <div class="widget-content">
+      <div class="widget-value" data-date>{{ today.strftime('%A, %B %d, %Y') }}</div>
+      <div class="widget-label">Today</div>
+    </div>
+  </div>
+  <div class="widget glass" data-widget="weather" id="weather-widget">
+    <span class="widget-icon">{{ icon('cloud', 18) }}</span>
+    <div class="widget-content">
+      <div class="widget-value" data-weather-temp>--°</div>
+      <div class="widget-row">
+        <span class="widget-label" data-weather-cond>Loading…</span>
+        <span class="widget-label" data-weather-loc></span>
+      </div>
+      <div class="widget-row" data-weather-range style="display:none;"></div>
+    </div>
+  </div>
+</section>
+
 <section class="hero">
   <h1 class="display">Overview</h1>
   <p class="subtle">{{ today.strftime('%A, %B %d') }}</p>
@@ -81,9 +110,38 @@
       {% endfor %}
     </ul>
   </section>
+
+  {# ---- Timer widget ---- #}
+  <section class="card glass timer-card" aria-labelledby="timer-h">
+    <div class="card-head">
+      <h3 id="timer-h">{{ icon('clock', 18) }} Timer</h3>
+    </div>
+    <div class="timer-content" id="timer-widget">
+      <div class="timer-display" data-timer-display>00:00</div>
+      <div class="timer-presets" data-timer-presets>
+        <button type="button" class="btn-preset" data-min="5">5m</button>
+        <button type="button" class="btn-preset" data-min="10">10m</button>
+        <button type="button" class="btn-preset" data-min="15">15m</button>
+        <button type="button" class="btn-preset" data-min="25">25m</button>
+        <button type="button" class="btn-preset" data-min="30">30m</button>
+        <button type="button" class="btn-preset" data-min="60">60m</button>
+      </div>
+      <div class="timer-custom">
+        <input type="number" id="timer-custom-min" min="1" max="1440" placeholder="Custom minutes" aria-label="Custom minutes">
+        <button type="button" class="btn-primary" id="timer-set-custom">Set</button>
+      </div>
+      <div class="timer-controls">
+        <button type="button" class="btn-primary" id="timer-start" aria-label="Start timer">{{ icon('play', 18) }} Start</button>
+        <button type="button" class="btn-primary" id="timer-pause" hidden aria-label="Pause timer">{{ icon('pause', 18) }} Pause</button>
+        <button type="button" class="icon-btn" id="timer-reset" aria-label="Reset timer">{{ icon('rotate-ccw', 18) }}</button>
+      </div>
+    </div>
+  </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/music.js') }}"></script>
+<script src="{{ url_for('static', filename='js/widgets.js') }}"></script>
+<script src="{{ url_for('static', filename='js/timer.js') }}"></script>
 {% endblock %}

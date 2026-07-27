@@ -1,7 +1,7 @@
 """F.R.I.D.A.Y. assistant: streaming chat endpoint + history/clear."""
 import json
 
-from flask import Blueprint, Response, jsonify, request, stream_with_context
+from flask import Blueprint, Response, jsonify, request, stream_with_context, g
 
 from core import undo
 from pages.friday import agent, messages
@@ -12,7 +12,7 @@ friday_bp = Blueprint("friday", __name__)
 @friday_bp.route("/api/undo", methods=["POST"])
 def undo_last():
     """Spec S — reverse the last data mutation."""
-    return jsonify(undo.undo())
+    return jsonify(undo.undo(g.session_id))
 
 
 def _sse(frames):

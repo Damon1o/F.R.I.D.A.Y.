@@ -46,12 +46,42 @@ ALTER TABLE todos  ADD COLUMN IF NOT EXISTS tag     TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS rrule   TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS exdates TEXT;
 
--- Spec S: single-level undo. One row (id = 1) holds the inverse of the last mutation.
+-- Spec S: append-only undo log. One row per mutation; undo() pops the latest for the session.
 CREATE TABLE IF NOT EXISTS undo_log (
-    id           INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    session_id   TEXT NOT NULL DEFAULT 'default',
     op           TEXT NOT NULL,
     target_table TEXT NOT NULL,
     row_id       BIGINT,
     payload      TEXT,
     created_at   TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
 );
+CREATE INDEX IF NOT EXISTS undo_log_session_id_idx ON undo_log (session_id, id DESC);
+
+-- Migration: replace legacy single-row undo_log (id=1 CHECK) with append-only version.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_name = 'undo_log' AND constraint_name = 'undo_log_id_check'
+    ) THEN
+        -- Drop the old constraint and table, recreate properly
+        DROP TABLE undo_log;
+        CREATE TABLE undo_log (
+            id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            session_id   TEXT NOT NULL DEFAULT 'default',
+            op           TEXT NOT NULL,
+            target_table TEXT NOT NULL,
+            row_id       BIGINT,
+            payload      TEXT,
+            created_at   TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+        );
+        CREATE INDEX undo_log_session_id_idx ON undo_log (session_id, id DESC);
+    ELSIF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name='undo_log' AND column_name='session_id'
+    ) THEN
+        -- Has new table but missing session_id column
+        ALTER TABLE undo_log ADD COLUMN session_id TEXT NOT NULL DEFAULT 'default';
+        CREATE INDEX IF NOT EXISTS undo_log_session_id_idx ON undo_log (session_id, id DESC);
+    END IF;
+END $$;

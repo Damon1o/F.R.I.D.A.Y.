@@ -5,6 +5,7 @@ ValidationError returns {"error": ...} so the LLM can self-correct mid-turn.
 """
 from dataclasses import asdict
 
+from flask import g
 from core import undo
 from pages.calendar import models as events
 from pages.calendar.models import ValidationError
@@ -12,7 +13,7 @@ from pages.todos import models as todos
 from pages.notes import models as notes
 from pages.search import models as search
 from pages.music import get_provider
-from pages.friday import weather
+from pages.friday import facts, weather
 
 _DT = "ISO-8601 datetime, e.g. 2026-07-24T15:00:00. Assume the user's local time."
 _RRULE = "RFC-5545 RRULE for repeats, e.g. FREQ=WEEKLY;BYDAY=MO,WE,FR. Omit for one-off events."
@@ -96,6 +97,19 @@ TOOLS = [
     _fn("get_weather", "Get current weather and a short forecast. Omit location for the user's home.", {
         "location": {"type": "string", "description": "City/place name; optional."},
     }, []),
+    _fn("get_datetime", "Get the current date and time. Always call this for any time or date "
+                        "question — never compute or guess the time yourself.", {
+        "timezone": {"type": "string", "description": "IANA zone, e.g. Europe/London. Omit for the user's own."},
+    }, []),
+    _fn("convert_currency", "Convert an amount between currencies at today's rate.", {
+        "amount": {"type": "number"},
+        "base": {"type": "string", "description": "ISO-4217 code to convert from, e.g. USD."},
+        "target": {"type": "string", "description": "ISO-4217 code to convert to, e.g. EUR."},
+    }, ["amount", "base", "target"]),
+    _fn("list_holidays", "List public holidays for a country and year.", {
+        "country": {"type": "string", "description": "ISO-3166 alpha-2 code; defaults to US."},
+        "year": {"type": "integer", "description": "Defaults to the current year."},
+    }, []),
     _fn("remember", "Store a free-form note/fact the user wants remembered.", {
         "text": {"type": "string"},
     }, ["text"]),
@@ -148,6 +162,12 @@ def dispatch(name: str, args: dict):
             return asdict(track) if track else {"playing": False}
         if name == "get_weather":
             return weather.get_weather(args.get("location"))
+        if name == "get_datetime":
+            return facts.get_datetime(args.get("timezone"))
+        if name == "convert_currency":
+            return facts.convert_currency(args["amount"], args["base"], args["target"])
+        if name == "list_holidays":
+            return facts.list_holidays(args.get("country", "US"), args.get("year"))
         if name == "remember":
             return notes.create_note(args["text"])
         if name == "recall":
@@ -160,7 +180,7 @@ def dispatch(name: str, args: dict):
         if name == "search_all":
             return search.search(args["query"])
         if name == "undo_last":
-            return undo.undo()
+            return undo.undo(getattr(g, "session_id", "default"))
         return {"error": f"unknown tool {name}"}
     except ValidationError as e:
         return {"error": str(e)}

@@ -10,13 +10,22 @@ CONTEXT_WINDOW = 24  # Spec P — cap replayed history so long threads keep a sm
 
 
 def _system() -> dict:
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc).astimezone().isoformat(timespec="minutes")
+    from core.clock import now as local_now
+    from pages.settings.routes import get_prefs
+    now = local_now().isoformat(timespec="minutes")
+    prefs = get_prefs()
+    profile = ""
+    if prefs.get("user_name"):
+        profile += f"Address the user as {prefs['user_name']}. "
+    if prefs.get("birthday"):
+        profile += f"The user's birthday is {prefs['birthday']}. "
     return {"role": "system", "content": (
         "You are F.R.I.D.A.Y., a concise personal productivity assistant. "
-        f"The current local datetime is {now}. "
+        f"The current local datetime is {now}. {profile}"
         "Use the tools to manage the user's events and todos, remember and recall notes, "
-        "check the weather, and control music. "
+        "check the weather, convert currencies, look up public holidays, and control music. "
+        "For any question about the current time or date, call get_datetime and report its "
+        "answer verbatim — never restate a time from earlier in the conversation. "
         "Act immediately — do not ask for confirmation. Resolve relative dates "
         "(tomorrow, Friday) to concrete ISO-8601 datetimes. After acting, reply in one "
         "short sentence describing what you did."

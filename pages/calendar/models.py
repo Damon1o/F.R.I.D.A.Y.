@@ -3,6 +3,7 @@ from datetime import datetime
 
 from dateutil.parser import isoparse
 from dateutil.rrule import rrulestr
+from flask import g
 
 from core import undo
 from core.db import execute, query
@@ -128,7 +129,7 @@ def create_event(data: dict) -> dict:
         f"INSERT INTO events ({','.join(cols)}) VALUES ({','.join(['%s'] * len(cols))}) RETURNING id",
         [fields[c] for c in cols],
     ).fetchone()
-    undo.record("delete", "events", row["id"])
+    undo.record("delete", "events", row["id"], session_id=getattr(g, "session_id", "default"))
     return get_event(row["id"])
 
 
@@ -139,7 +140,7 @@ def update_event(event_id: int, data: dict):
     fields = _clean(data, partial=True)
     if fields:
         cols = list(fields)
-        undo.record("update", "events", event_id, {c: dict(prior)[c] for c in cols})
+        undo.record("update", "events", event_id, {c: dict(prior)[c] for c in cols}, session_id=getattr(g, "session_id", "default"))
         execute(
             f"UPDATE events SET {','.join(f'{c}=%s' for c in cols)} WHERE id = %s",
             [fields[c] for c in cols] + [event_id],
@@ -156,7 +157,7 @@ def skip_occurrence(event_id: int, occ_iso: str) -> bool:
     exdates = [d for d in (row["exdates"] or "").split(",") if d]
     if occ not in exdates:
         exdates.append(occ)
-        undo.record("update", "events", event_id, {"exdates": row["exdates"]})
+        undo.record("update", "events", event_id, {"exdates": row["exdates"]}, session_id=getattr(g, "session_id", "default"))
         execute("UPDATE events SET exdates = %s WHERE id = %s", (",".join(exdates), event_id))
     return True
 
@@ -165,5 +166,5 @@ def delete_event(event_id: int) -> bool:
     row = _raw(event_id)
     if row is None:
         return False
-    undo.record("restore", "events", None, dict(row))
+    undo.record("restore", "events", None, dict(row), session_id=getattr(g, "session_id", "default"))
     return execute("DELETE FROM events WHERE id = %s", (event_id,)).rowcount > 0

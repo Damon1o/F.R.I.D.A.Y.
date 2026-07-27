@@ -47,7 +47,10 @@ def test_nothing_to_undo(ctx):
 
 
 def test_undo_endpoint_and_tool(ctx, client):
+    # Create todo in "default" session (via ctx fixture app context)
     todos.create_todo({"title": "viaendpoint"})
+    # Set cookie so client uses same session
+    client.set_cookie("friday_session", "default")
     assert client.post("/api/undo").get_json()["undone"] == "delete"
     todos.create_todo({"title": "viatool"})
     assert dispatch("undo_last", {})["undone"] == "delete"

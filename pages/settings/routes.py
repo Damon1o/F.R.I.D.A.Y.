@@ -5,35 +5,64 @@ from core.db import query, execute
 
 settings_bp = Blueprint("settings", __name__)
 
-DEFAULT_PREFS = {
+BOOL_PREFS = {
     "nav_collapsed": "false",
     "friday_visible": "true",
     "wake_word": "false",
 }
+# Free-text profile fields. Empty string means "not set".
+TEXT_PREFS = {
+    "user_name": "",
+    "birthday": "",
+    "timezone": "",
+    "units": "metric",
+    "home_lat": "",
+    "home_lon": "",
+    "home_name": "",
+}
+DEFAULT_PREFS = {**BOOL_PREFS, **TEXT_PREFS}
 _KEYS = tuple(DEFAULT_PREFS)
 
 
 @settings_bp.route("/settings")
 def settings_page():
-    prefs = _get_prefs()
+    prefs = get_prefs()
     return render_template("settings.html", prefs=prefs)
 
 
 @settings_bp.route("/api/settings/ui", methods=["GET"])
 def get_ui_settings():
-    return jsonify(_get_prefs())
+    return jsonify(get_prefs())
 
 
 @settings_bp.route("/api/settings/ui", methods=["POST"])
 def set_ui_settings():
     data = request.get_json(silent=True) or {}
-    for key in _KEYS:
+    for key in BOOL_PREFS:
         if key in data:
             _set_pref(key, "true" if data[key] else "false")
-    return jsonify(_get_prefs())
+    for key in TEXT_PREFS:
+        if key in data:
+            value = str(data[key] or "").strip()
+            if key == "timezone" and value and not _valid_tz(value):
+                return jsonify({"error": f"unknown timezone: {value}"}), 400
+            if key == "units" and value and value not in ("metric", "imperial"):
+                return jsonify({"error": f"unknown units: {value}"}), 400
+            _set_pref(key, value)
+    return jsonify(get_prefs())
 
 
-def _get_prefs() -> dict:
+def _valid_tz(name: str) -> bool:
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+    try:
+        ZoneInfo(name)
+        return True
+    except (ZoneInfoNotFoundError, ValueError):
+        return False
+
+
+def get_prefs() -> dict:
+    """All settings, defaults filled in. Public — the agent reads the profile fields."""
     placeholders = ", ".join(["%s"] * len(_KEYS))
     rows = query(f"SELECT key, value FROM settings WHERE key IN ({placeholders})", _KEYS)
     prefs = DEFAULT_PREFS.copy()

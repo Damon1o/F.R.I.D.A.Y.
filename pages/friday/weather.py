@@ -65,11 +65,16 @@ def get_weather(location: str = None) -> dict:
 
     d = resp.json()
     cur, daily = d.get("current", {}), d.get("daily", {})
-    forecast = [
-        {"date": date, "hi": daily["temperature_2m_max"][i],
-         "lo": daily["temperature_2m_min"][i], "conditions": _label(daily["weather_code"][i])}
-        for i, date in enumerate(daily.get("time", []))
-    ]
+    forecast = []
+    daily_time = daily.get("time", [])
+    daily_max = daily.get("temperature_2m_max", [])
+    daily_min = daily.get("temperature_2m_min", [])
+    daily_code = daily.get("weather_code", [])
+    for i, date in enumerate(daily_time):
+        hi = daily_max[i] if i < len(daily_max) else None
+        lo = daily_min[i] if i < len(daily_min) else None
+        code = daily_code[i] if i < len(daily_code) else None
+        forecast.append({"date": date, "hi": hi, "lo": lo, "conditions": _label(code)})
     return {
         "location": name,
         "current": {"temp": cur.get("temperature_2m"),
