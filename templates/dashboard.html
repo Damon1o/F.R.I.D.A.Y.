@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard · F.R.I.D.A.Y.{% endblock %}
-{% block topbar %}Assistant Hub{% endblock %}
+{% block topbar %}Dashboard{% endblock %}
 
 {% block content %}
 <section class="hero">
@@ -47,7 +47,8 @@
     <ul class="bars" aria-label="Events per day this week">
       {% for label, bar, count in week %}
       <li>
-        <span class="bar-track">{% if count %}<span class="bar-fill" style="height: {{ bar.pct }}%"></span>{% endif %}</span>
+        <span class="bar-track">{% if count %}<span class="bar-fill" style="height: {{ bar.pct }}%"></span>{% endif
+          %}</span>
         <span class="bar-val">{{ count }}</span>
         <span class="bar-lab">{{ label }}</span>
       </li>

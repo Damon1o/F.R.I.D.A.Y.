@@ -764,6 +764,71 @@ input[type='range']::-moz-range-thumb {
 
 .chat-hint { flex: none; text-align: center; color: var(--on-surface-faint); }
 
+/* ---------- 12b. Past conversations (AnimatedList, vanilla port) ---------- */
+.chat-history { flex: none; border-bottom: 1px solid var(--hairline); }
+
+.scroll-list-container { position: relative; }
+
+.scroll-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--s-4) 0;
+  outline: none;
+}
+
+.scroll-list.no-scrollbar { scrollbar-width: none; }
+.scroll-list.no-scrollbar::-webkit-scrollbar { display: none; }
+
+.scroll-list .item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--glass-surface);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity var(--dur-base) var(--ease-out),
+              transform var(--dur-base) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              background var(--dur-fast) var(--ease-out);
+}
+
+.scroll-list .item.is-in { opacity: 1; transform: scale(1); }
+.scroll-list .item.selected { background: var(--glass-hover); border-color: var(--hairline-strong); }
+.scroll-list .item.is-current { border-color: var(--outline-variant); }
+
+.item-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-body-sm);
+}
+
+.item-meta { flex: none; color: var(--on-surface-faint); }
+
+.scroll-list .empty { padding: var(--s-4); color: var(--on-surface-faint); }
+
+.top-gradient, .bottom-gradient {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.top-gradient { top: 0; height: 40px; background: linear-gradient(to bottom, var(--surface), transparent); }
+.bottom-gradient { bottom: 0; height: 64px; background: linear-gradient(to top, var(--surface), transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-list .item { opacity: 1; transform: none; transition: none; }
+}
+
 /* ---------- 13. Dashboard ---------- */
 .widget-bar {
   display: grid;
@@ -1307,16 +1372,96 @@ input[type='range']::-moz-range-thumb {
 .result-group > h2 { margin-bottom: var(--s-2); }
 
 /* ---------- 20. Scrollbars ---------- */
-.content, .friday-body, .modal {
+.content, .friday-body, .modal, .scroll-list {
   scrollbar-width: thin;
   scrollbar-color: var(--outline-variant) transparent;
 }
 
-.content::-webkit-scrollbar, .friday-body::-webkit-scrollbar, .modal::-webkit-scrollbar { width: 8px; }
+.content::-webkit-scrollbar, .friday-body::-webkit-scrollbar, .modal::-webkit-scrollbar,
+.scroll-list::-webkit-scrollbar { width: 8px; }
 
-.content::-webkit-scrollbar-thumb, .friday-body::-webkit-scrollbar-thumb, .modal::-webkit-scrollbar-thumb {
+.content::-webkit-scrollbar-thumb, .friday-body::-webkit-scrollbar-thumb, .modal::-webkit-scrollbar-thumb,
+.scroll-list::-webkit-scrollbar-thumb {
   background: var(--outline-variant);
   border-radius: var(--radius-full);
+}
+
+/* ---------- 20b. Target cursor (React Bits TargetCursor, vanilla port) ---------- */
+.has-target-cursor, .has-target-cursor * { cursor: none; }
+.has-target-cursor input, .has-target-cursor textarea { cursor: text; }
+
+.target-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: difference;
+  will-change: transform;
+}
+
+.target-cursor-spin {
+  position: absolute;
+  inset: 0;
+  animation: cursor-spin 2s linear infinite;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.target-cursor.is-locked .target-cursor-spin { animation: none; transform: rotate(0deg); }
+.target-cursor.is-down .target-cursor-spin { transform: scale(0.9); }
+
+@keyframes cursor-spin { to { transform: rotate(360deg); } }
+
+.target-cursor-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.target-cursor.is-down .target-cursor-dot { transform: scale(0.7); }
+
+.target-cursor-corner {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  border: 3px solid var(--primary);
+  will-change: transform;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.corner-tl { transform: translate(-18px, -18px); border-right: none; border-bottom: none; }
+.corner-tr { transform: translate(6px, -18px);   border-left: none;  border-bottom: none; }
+.corner-br { transform: translate(6px, 6px);     border-left: none;  border-top: none; }
+.corner-bl { transform: translate(-18px, 6px);   border-right: none; border-top: none; }
+
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .target-cursor { display: none; }
+  .has-target-cursor, .has-target-cursor * { cursor: auto; }
+}
+
+/* ---------- 20c. Magnet (React Bits Magnet, vanilla port) ---------- */
+/* magnet.js writes --mag-x/--mag-y; CSS owns the easing so the two states
+   (pulled / released) differ only by a class. */
+.is-magnet {
+  transform: translate3d(var(--mag-x, 0), var(--mag-y, 0), 0);
+  transition: transform var(--dur-slow) var(--ease-in-out);
+  will-change: transform;
+}
+
+.is-magnet.is-pulled { transition: transform var(--dur-base) var(--ease-out); }
+
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .is-magnet { transform: none; transition: none; }
 }
 
 /* ---------- 21. Responsive ---------- */
@@ -1377,7 +1522,11 @@ input[type='range']::-moz-range-thumb {
   }
 
   .friday.is-hidden { transform: translateX(100%); }
-  .content { padding: var(--s-6) var(--s-4) var(--s-10); }
+  .content {
+    padding: var(--s-6) max(var(--s-4), env(safe-area-inset-right))
+             calc(var(--s-10) + env(safe-area-inset-bottom))
+             max(var(--s-4), env(safe-area-inset-left));
+  }
   .cal-grid { grid-auto-rows: minmax(72px, 1fr); }
   .settings-grid { grid-template-columns: 1fr; }
 }
@@ -1396,4 +1545,43 @@ input[type='range']::-moz-range-thumb {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---------- 22. Touch / iOS home-screen bookmark ---------- */
+/* Runs on any touch device; the safe-area insets are 0 everywhere except a
+   notched iPhone, so no media query is needed to guard them. */
+body {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none; /* no rubber-band drag of the whole app */
+}
+
+/* Under viewport-fit=cover the shell paints edge to edge — pad the chrome back
+   out of the notch, the home indicator and the curved corners. */
+.topbar { padding-top: env(safe-area-inset-top); }
+.rail { padding-left: env(safe-area-inset-left); }
+.content { padding-bottom: calc(var(--s-12) + env(safe-area-inset-bottom)); }
+.friday { padding-bottom: env(safe-area-inset-bottom); }
+
+@media (pointer: coarse) {
+  /* iOS zooms the page when a focused field is under 16px. Nothing else fixes it. */
+  input, select, textarea { font-size: 16px; }
+
+  /* 44px is Apple's minimum tap target; the desktop sizes are smaller. */
+  .icon-btn, .nav-link, .rail-brand { min-height: 44px; min-width: 44px; }
+
+  /* Momentum scrolling inside panes instead of scrolling the document behind. */
+  .content, .friday-body, .rail .nav { overscroll-behavior: contain; }
+}
+
+/* Drawer scrim: taps outside the open rail close it (see friday.js). */
+.rail-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 860px) {
+  .app-shell:not(.rail-collapsed) .rail-scrim { display: block; }
 }

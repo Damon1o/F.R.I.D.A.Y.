@@ -16,10 +16,23 @@
       <p class="subtle">Ask for anything across your events, tasks, notes and music.</p>
     </div>
     <span class="label-mono" id="friday-state"><i class="pulse" aria-hidden="true"></i>Online</span>
+    <button class="icon-btn" id="friday-history" type="button" aria-expanded="false"
+      aria-controls="chat-history" aria-label="Past conversations" title="Past conversations">
+      {{ icon('history', 16) }}
+    </button>
     <button class="icon-btn" id="friday-new" type="button" aria-label="New chat" title="New chat">
       {{ icon('square-pen', 16) }}
     </button>
   </header>
+
+  {# Past conversations. Items animate in on scroll (AnimatedList, ported to vanilla). #}
+  <aside class="chat-history" id="chat-history" hidden>
+    <div class="scroll-list-container">
+      <div class="scroll-list" id="thread-list" tabindex="-1"></div>
+      <div class="top-gradient" aria-hidden="true"></div>
+      <div class="bottom-gradient" aria-hidden="true"></div>
+    </div>
+  </aside>
 
   <div class="chat-body friday-body" id="friday-messages" aria-live="polite"></div>
 

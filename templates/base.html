@@ -3,9 +3,19 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# viewport-fit=cover: the app draws under the notch/home indicator; CSS pays it
+     back with env(safe-area-inset-*) padding. #}
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}F.R.I.D.A.Y.{% endblock %}</title>
+  {# Home-screen bookmark on iOS Safari: standalone chrome, translucent status bar. #}
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="F.R.I.D.A.Y.">
+  <meta name="theme-color" content="#121414">
   <link rel="icon" href="{{ url_for('static', filename='images/friday.svg') }}" type="image/svg+xml">
+  {# iOS ignores SVG here — needs a raster icon or it screenshots the page instead. #}
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
   <link rel="preload" as="font" type="font/woff2" crossorigin
     href="{{ url_for('static', filename='fonts/geist.woff2') }}">
   <link rel="preload" as="font" type="font/woff2" crossorigin
@@ -101,9 +111,14 @@
     {# ================= Assistant panel ================= #}
     {# /friday overrides this to empty — one conversation on screen, not two. #}
     {% block assistant %}{% include '_friday_panel.html' %}{% endblock %}
+
+    {# Mobile only (CSS-gated): tap outside the open nav drawer to close it. #}
+    <div class="rail-scrim" id="rail-scrim" aria-hidden="true"></div>
   </div>
 
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/cursor.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/magnet.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/search.js') }}"></script>
   <script src="{{ url_for('static', filename='js/friday.js') }}"></script>
   <script src="{{ url_for('static', filename='js/voice-web.js') }}"></script>

@@ -30,7 +30,10 @@ def _setting(key, default=None):
 
 
 def _geocode(location: str):
-    resp = requests.get(GEOCODE_URL, params={"name": location, "count": 1}, timeout=10)
+    try:
+        resp = requests.get(GEOCODE_URL, params={"name": location, "count": 1}, timeout=10)
+    except requests.RequestException:
+        return None
     results = resp.json().get("results") if resp.ok else None
     if not results:
         return None

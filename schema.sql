@@ -97,3 +97,8 @@ CREATE INDEX IF NOT EXISTS todos_completed_idx  ON todos    (completed_at);
 CREATE INDEX IF NOT EXISTS todos_tag_idx        ON todos    (tag);
 CREATE INDEX IF NOT EXISTS notes_created_at_idx ON notes    (created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS messages_id_idx      ON messages (id DESC);
+
+-- Conversations: every message belongs to a thread, so "new chat" starts thread N+1
+-- instead of deleting history. Existing rows collapse into thread 1.
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS thread_id BIGINT NOT NULL DEFAULT 1;
+CREATE INDEX IF NOT EXISTS messages_thread_idx ON messages (thread_id, id DESC);

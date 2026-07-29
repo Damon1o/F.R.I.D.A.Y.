@@ -46,8 +46,10 @@ def _clean(data: dict, *, partial: bool) -> dict:
     if "rrule" in data:
         rr = (data["rrule"] or "").strip()
         if rr:
+            start_str = out.get("start_at") or data.get("start_at") or data.get("_existing_start_at")
+            dtstart = isoparse(start_str) if start_str else None
             try:
-                rrulestr(rr, dtstart=isoparse(out.get("start_at") or data.get("start_at")))
+                rrulestr(rr, dtstart=dtstart)
             except (ValueError, TypeError):
                 raise ValidationError("rrule must be a valid RFC-5545 RRULE")
             out["rrule"] = rr

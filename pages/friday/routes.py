@@ -65,11 +65,26 @@ def history():
     """Newest `limit` turns; `before` pages backwards for older history."""
     limit = request.args.get("limit", type=int)
     before = request.args.get("before", type=int)
-    rows = messages.history(limit=limit, before_id=before)
+    rows = messages.history(limit=limit, before_id=before,
+                            thread_id=request.args.get("thread", type=int))
     shown = [{"id": m["id"], "role": m["role"], "content": m["content"]}
              for m in rows
              if m["content"] and m["role"] in ("user", "assistant")]
     return jsonify(shown)
+
+
+@friday_bp.route("/api/friday/threads", methods=["GET"])
+def thread_list():
+    """Past conversations, newest first, plus which one is open."""
+    return jsonify({"current": messages.current_thread(), "threads": messages.threads()})
+
+
+@friday_bp.route("/api/friday/thread", methods=["POST"])
+def open_thread():
+    """`{"id": N}` reopens a past conversation; no id starts a fresh one."""
+    thread_id = (request.get_json(silent=True) or {}).get("id")
+    new = messages.set_thread(int(thread_id)) if thread_id else messages.new_thread()
+    return jsonify({"id": new})
 
 
 @friday_bp.route("/api/friday/clear", methods=["POST"])

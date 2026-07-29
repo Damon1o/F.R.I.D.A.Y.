@@ -144,7 +144,12 @@
     running = false;
   }
 
-  window.addEventListener('wake-pref-changed', function (e) { e.detail.enabled ? start() : stop(); });
+  var wakeWordEnabled = false;
+
+  window.addEventListener('wake-pref-changed', function (e) {
+    wakeWordEnabled = !!e.detail.enabled;
+    wakeWordEnabled ? start() : stop();
+  });
   window.addEventListener('wake-threshold-changed', function (e) { threshold = e.detail.value; });
 
   // A page loaded without a user gesture gets a suspended AudioContext, and a suspended
@@ -153,6 +158,7 @@
   // because flipping the toggle *is* the gesture.
   ['click', 'keydown', 'touchstart'].forEach(function (evt) {
     document.addEventListener(evt, function () {
+      if (!wakeWordEnabled) return;
       if (!running) start();
       else if (ctx && ctx.state !== 'running') ctx.resume();
     }, { capture: true });
@@ -160,6 +166,9 @@
 
   fetch('/api/settings/ui')
     .then(function (r) { return r.json(); })
-    .then(function (prefs) { if (prefs.wake_word === 'true') start(); })
+    .then(function (prefs) {
+      wakeWordEnabled = prefs.wake_word === 'true';
+      if (wakeWordEnabled) start();
+    })
     .catch(function () { /* settings unreachable: stay off */ });
 })();

@@ -45,7 +45,7 @@
       </div>
       <div class="music-controls">
         <button class="icon-btn" data-action="prev" aria-label="Previous">${icon('skip-back', 18)}</button>
-        <button class="icon-btn music-play" data-action="play" aria-label="${data.is_playing ? 'Pause' : 'Play'}">${icon(data.is_playing ? 'pause' : 'play', 20)}</button>
+        <button class="icon-btn music-play" data-action="${data.is_playing ? 'pause' : 'play'}" aria-label="${data.is_playing ? 'Pause' : 'Play'}">${icon(data.is_playing ? 'pause' : 'play', 20)}</button>
         <button class="icon-btn" data-action="next" aria-label="Next">${icon('skip-forward', 18)}</button>
       </div>
     `;

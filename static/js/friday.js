@@ -158,11 +158,141 @@
     });
   }
 
+  // New chat starts a fresh thread — the previous conversation stays readable
+  // from the history drawer instead of being deleted.
   if (newBtn) newBtn.addEventListener('click', async function () {
-    await fetch('/api/friday/clear', { method: 'POST' });
+    await fetch('/api/friday/thread', { method: 'POST' });
     list.innerHTML = '';
+    oldestId = null;
     input.focus();
   });
+
+  // ---- Past conversations: AnimatedList (React Bits) ported to vanilla ----
+  // IntersectionObserver drives the scale/fade, the gradients track scroll
+  // position, arrows + Enter navigate. Same behaviour, no React, no motion dep.
+  function animatedList(container, items, onSelect) {
+    var view = container.querySelector('.scroll-list');
+    var top = container.querySelector('.top-gradient');
+    var bottom = container.querySelector('.bottom-gradient');
+    var selected = -1;
+
+    if (container._cleanup) container._cleanup();
+    view.innerHTML = '';
+
+    if (!items.length) {
+      var empty = document.createElement('p');
+      empty.className = 'empty label-mono';
+      empty.textContent = 'No earlier conversations';
+      view.appendChild(empty);
+      return;
+    }
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { e.target.classList.toggle('is-in', e.isIntersecting); });
+    }, { root: view, threshold: 0.5 });
+
+    function select(i, scroll) {
+      selected = i;
+      view.querySelectorAll('.item').forEach(function (el, n) {
+        el.classList.toggle('selected', n === i);
+      });
+      var el = view.querySelector('[data-index="' + i + '"]');
+      if (!el || !scroll) return;
+      var margin = 50;
+      var itemTop = el.offsetTop, itemBottom = itemTop + el.offsetHeight;
+      if (itemTop < view.scrollTop + margin) {
+        view.scrollTo({ top: itemTop - margin, behavior: 'smooth' });
+      } else if (itemBottom > view.scrollTop + view.clientHeight - margin) {
+        view.scrollTo({ top: itemBottom - view.clientHeight + margin, behavior: 'smooth' });
+      }
+    }
+
+    items.forEach(function (item, i) {
+      var el = document.createElement('div');
+      el.className = 'item' + (item.current ? ' is-current' : '');
+      el.dataset.index = i;
+      el.style.transitionDelay = Math.min(i, 8) * 30 + 'ms';
+      var text = document.createElement('p');
+      text.className = 'item-text';
+      text.textContent = item.title;
+      var meta = document.createElement('span');
+      meta.className = 'item-meta label-mono';
+      meta.textContent = item.meta || '';
+      el.appendChild(text);
+      el.appendChild(meta);
+      el.addEventListener('mouseenter', function () { select(i, false); });
+      el.addEventListener('click', function () { select(i, false); onSelect(item, i); });
+      view.appendChild(el);
+      io.observe(el);
+    });
+
+    function onScroll() {
+      var d = view.scrollHeight - (view.scrollTop + view.clientHeight);
+      top.style.opacity = Math.min(view.scrollTop / 50, 1);
+      bottom.style.opacity = view.scrollHeight <= view.clientHeight ? 0 : Math.min(d / 50, 1);
+    }
+
+    function onKey(e) {
+      if (container.closest('[hidden]')) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        select(Math.min(selected + 1, items.length - 1), true);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        select(Math.max(selected - 1, 0), true);
+      } else if (e.key === 'Enter' && selected >= 0) {
+        e.preventDefault();
+        onSelect(items[selected], selected);
+      }
+    }
+
+    view.addEventListener('scroll', onScroll);
+    document.addEventListener('keydown', onKey);
+    container._cleanup = function () {
+      io.disconnect();
+      view.removeEventListener('scroll', onScroll);
+      document.removeEventListener('keydown', onKey);
+    };
+    onScroll();
+  }
+
+  var drawer = document.getElementById('chat-history');
+  var histBtn = document.getElementById('friday-history');
+
+  if (drawer && histBtn) {
+    var box = drawer.querySelector('.scroll-list-container');
+
+    async function loadThreads() {
+      var res = await fetch('/api/friday/threads');
+      var data = await res.json();
+      animatedList(box, data.threads.map(function (t) {
+        return {
+          id: t.id,
+          title: t.title,
+          meta: (t.created_at || '').slice(0, 10),
+          current: t.id === data.current,
+        };
+      }), async function (item) {
+        await fetch('/api/friday/thread', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item.id }),
+        });
+        drawer.hidden = true;
+        histBtn.setAttribute('aria-expanded', 'false');
+        oldestId = null;
+        loadHistory();
+      });
+    }
+
+    histBtn.addEventListener('click', async function () {
+      drawer.hidden = !drawer.hidden;
+      histBtn.setAttribute('aria-expanded', String(!drawer.hidden));
+      if (!drawer.hidden) {
+        try { await loadThreads(); } catch (e) { /* offline: leave drawer empty */ }
+      }
+    });
+  }
 
   loadHistory();
 })();
@@ -174,8 +304,17 @@
   if (!rail || !btn) return;
 
   var prefersCollapsed = false;
+  // Below 860px the rail is an overlay drawer — start it closed whatever the
+  // saved desktop preference says, or it covers the phone screen on every load.
+  var isNarrow = window.matchMedia('(max-width: 860px)');
+
+  if (isNarrow.matches) {
+    prefersCollapsed = true;
+    applyNavState(true); // sync, before the prefs fetch — no open-drawer flash
+  }
 
   async function loadPrefs() {
+    if (isNarrow.matches) return;
     try {
       var res = await fetch('/api/settings/ui');
       var data = await res.json();
@@ -198,6 +337,7 @@
   function toggleNav() {
     prefersCollapsed = !prefersCollapsed;
     applyNavState(prefersCollapsed);
+    if (isNarrow.matches) return; // drawer state on a phone is not a saved preference
     fetch('/api/settings/ui', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -206,6 +346,11 @@
   }
 
   btn.addEventListener('click', toggleNav);
+
+  // Mobile drawer: tap the scrim to close.
+  document.getElementById('rail-scrim')?.addEventListener('click', function () {
+    if (!prefersCollapsed) toggleNav();
+  });
 
   // Keyboard shortcut: Ctrl/Cmd + B
   document.addEventListener('keydown', function (e) {
@@ -253,6 +398,9 @@
 
   // Read initial state from server-rendered DOM — no fetch, no flash.
   var visible = !panel.classList.contains('is-hidden');
+  // Same as the nav rail: on a phone the panel is a full-height sheet, so it
+  // starts closed regardless of the saved desktop preference.
+  var isNarrow = window.matchMedia('(max-width: 860px)');
 
   function applyFridayVisibility(show) {
     visible = show;
@@ -265,12 +413,16 @@
     localStorage.setItem('fridayVisible', String(visible));
   }
 
+  if (isNarrow.matches && visible) applyFridayVisibility(false);
+
   function toggleFriday() {
-    applyFridayVisibility(!visible);
+    var nextState = !visible;
+    applyFridayVisibility(nextState);
+    if (isNarrow.matches) return; // sheet state on a phone is not a saved preference
     fetch('/api/settings/ui', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ friday_visible: !visible }),
+      body: JSON.stringify({ friday_visible: nextState }),
     }).catch(console.error);
   }
 
