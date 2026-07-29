@@ -39,10 +39,6 @@ def index():
     today = user_now.date()
     user_tz = tz()
 
-    # Start/end of today in user's timezone, as ISO strings for list_events (which stores local wall time)
-    start = datetime.combine(today, datetime.min.time()).replace(tzinfo=user_tz).isoformat()
-    end = datetime.combine(today, datetime.max.time()).replace(tzinfo=user_tz).isoformat()
-    events_today = list_events(start=start, end=end)
     open_todos = list_todos(done=False)
     all_todos = list_todos()
 
@@ -71,12 +67,6 @@ def index():
     return render_template(
         "dashboard.html",
         today=today,
-        stats={
-            "events": len(events_today),
-            "open": len(open_todos),
-            "overdue": overdue,
-            "completed": completed_week,
-        },
         week=list(zip(_WD, _bars(events_by_day), events_by_day)),
         breakdown=[
             ("Open tasks", len(open_todos)),

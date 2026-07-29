@@ -6,11 +6,12 @@
 <section class="page-head">
   <div>
     <h1 class="display">Remembered</h1>
-    <p class="subtle">Things F.R.I.D.A.Y. is holding onto for you.</p>
+    <p class="subtle">Everything F.R.I.D.A.Y. is holding onto for you.</p>
   </div>
+  <span class="tag">{{ total }} stored</span>
 </section>
 
-<section class="card glass">
+<section class="card">
   <ul class="task-list" id="notes-list">
     {% for n in notes %}
     <li data-id="{{ n.id }}">
@@ -19,8 +20,17 @@
       <button class="icon-btn danger" data-delete aria-label="Delete">{{ icon('trash-2', 16) }}</button>
     </li>
     {% else %}
-    <li class="empty">Nothing remembered yet. Tell F.R.I.D.A.Y. to remember something.</li>
+    <li class="empty">Nothing yet. Tell F.R.I.D.A.Y. to remember something and it lands here.</li>
     {% endfor %}
   </ul>
+  {% if total > notes | length %}
+  <div class="load-more label-mono" id="notes-more" data-total="{{ total }}" data-page-size="{{ page_size }}">
+    <i class="pulse" aria-hidden="true"></i>Loading more
+  </div>
+  {% endif %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/notes.js') }}"></script>
 {% endblock %}

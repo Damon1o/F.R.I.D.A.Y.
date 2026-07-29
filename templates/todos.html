@@ -3,32 +3,46 @@
 {% block topbar %}Tasks{% endblock %}
 
 {% block content %}
+{% set open_todos = todos | rejectattr('done') | list %}
+{% set done_todos = todos | selectattr('done') | list %}
+
 <section class="page-head">
   <div>
-    <h1 class="display">Master List</h1>
-    <p class="subtle">Everything on your plate.</p>
+    <h1 class="display">Pending operations</h1>
+    <p class="subtle">
+      {% if open_todos %}{{ open_todos | length }} open{% if done_todos %}, {{ done_todos | length }} cleared{% endif %}.
+      {% else %}Nothing open. The queue is clear.{% endif %}
+    </p>
   </div>
+  <span class="tag">Master list</span>
 </section>
 
-<section class="card glass">
-  <form class="quick-add wide" data-quick="todo">
+<section class="card">
+  <form class="quick-add" data-quick="todo">
     <input name="title" placeholder="Add a task and press Enter" required autocomplete="off">
     <input name="due_at" type="datetime-local" aria-label="Due date">
-    <button class="btn-primary" type="submit">{{ icon('plus', 18) }} Add</button>
+    <button class="btn-primary" type="submit">{{ icon('plus', 16) }} Add</button>
   </form>
 
   <ul class="task-list" id="todos-list">
-    {% for t in todos %}
-    <li data-id="{{ t.id }}" class="{{ 'is-done' if t.done }}">
-      <button class="check {{ 'checked' if t.done }}" data-check aria-label="Toggle complete">
-        {{ icon('check', 16) }}
-      </button>
+    {% for t in open_todos %}
+    <li data-id="{{ t.id }}">
+      <button class="check" data-check aria-label="Mark complete">{{ icon('check', 14) }}</button>
       <span class="task-title">{{ t.title }}</span>
       {% if t.due_at %}<span class="task-due">{{ t.due_at[:16].replace('T', ' ') }}</span>{% endif %}
       <button class="icon-btn danger" data-delete aria-label="Delete">{{ icon('trash-2', 16) }}</button>
     </li>
     {% else %}
-    <li class="empty">No tasks yet. Add one above.</li>
+    <li class="empty">No open tasks. Say &ldquo;Hey Friday, add a task&rdquo; or type one above.</li>
+    {% endfor %}
+
+    {% for t in done_todos %}
+    <li data-id="{{ t.id }}" class="is-done">
+      <button class="check checked" data-check aria-label="Mark incomplete">{{ icon('check', 14) }}</button>
+      <span class="task-title">{{ t.title }}</span>
+      {% if t.due_at %}<span class="task-due">{{ t.due_at[:16].replace('T', ' ') }}</span>{% endif %}
+      <button class="icon-btn danger" data-delete aria-label="Delete">{{ icon('trash-2', 16) }}</button>
+    </li>
     {% endfor %}
   </ul>
 </section>

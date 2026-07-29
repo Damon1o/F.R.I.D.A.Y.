@@ -2,7 +2,7 @@
 `undo()` pops and applies the latest for the session. Best-effort: recording never raises."""
 import json
 
-from core.db import execute, query
+from core.db import execute, query, rollback
 
 
 DEFAULT_SESSION = "default"
@@ -21,7 +21,7 @@ def record(op: str, table: str, row_id=None, payload=None, session_id: str = DEF
             (session_id, op, table, row_id, json.dumps(payload) if payload is not None else None),
         )
     except Exception:
-        pass
+        rollback()  # best-effort logging must not break the mutation it follows
 
 
 def peek(session_id: str = DEFAULT_SESSION):

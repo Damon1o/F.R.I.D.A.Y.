@@ -1,18 +1,30 @@
-{# Always-on F.R.I.D.A.Y. assistant panel. Wired in Phase 2 (chat + tool-calling). #}
-<aside class="friday glass" aria-label="F.R.I.D.A.Y. assistant">
+{# Always-on F.R.I.D.A.Y. assistant panel. Right column of the unified shell. #}
+<aside class="friday {{ 'is-hidden' if friday_visible == 'false' }}" aria-label="F.R.I.D.A.Y. assistant">
   <div class="friday-head">
-    <span class="friday-orb">{{ icon('mic', 20) }}</span>
     <div class="friday-title">
-      <strong>F.R.I.D.A.Y.</strong>
-      <small>AI Assistant</small>
+      <strong>AI Assistant</strong>
+      <small class="label-mono" id="friday-state"><i class="pulse" aria-hidden="true"></i>Online</small>
     </div>
+    <span class="friday-orb" aria-hidden="true">{{ icon('audio-lines', 18) }}</span>
     <button class="icon-btn" id="friday-new" type="button" aria-label="New chat" title="New chat">
-      {{ icon('plus', 18) }}
+      {{ icon('square-pen', 16) }}
     </button>
   </div>
+
   <div class="friday-body" id="friday-messages" aria-live="polite"></div>
+
   <form class="friday-input" id="friday-form">
-    <input type="text" id="friday-text" placeholder="Ask F.R.I.D.A.Y.…" autocomplete="off">
-    <button class="icon-btn" id="friday-voice" type="button" hidden aria-label="Hold to talk" title="Talk">{{ icon('mic', 18) }}</button>    <button class="icon-btn" type="submit" aria-label="Send">{{ icon('chevron-right', 18) }}</button>
+    <input type="text" id="friday-text" placeholder="Command F.R.I.D.A.Y.…" autocomplete="off">
+    <input type="file" id="friday-file" hidden
+      accept=".txt,.md,.csv,.tsv,.json,.yaml,.yml,.log,.xml,.html,.py,.js,.sql,.pdf,.docx">
+    <button class="icon-btn" id="friday-attach" type="button" aria-label="Attach a file" title="Attach a file">
+      {{ icon('paperclip', 16) }}
+    </button>
+    <button class="icon-btn" id="friday-voice" type="button" hidden aria-label="Hold to talk" title="Talk">
+      {{ icon('mic', 16) }}
+    </button>
+    <button class="icon-btn is-send" type="submit" aria-label="Send">{{ icon('send', 16) }}</button>
   </form>
+
+  <p class="friday-hint label-mono">Say &ldquo;Hey Friday&rdquo;</p>
 </aside>

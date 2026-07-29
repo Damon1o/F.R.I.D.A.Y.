@@ -1,84 +1,149 @@
-/* F.R.I.D.A.Y. design tokens — sourced from the Stitch "Glassmorphic AI Productivity Suite"
-   export (docs/design/stitch/). Monochrome, Material-3 semantic naming. Self-hosted;
-   no external CDN. Components reference these vars only — no hex literals downstream. */
+/* F.R.I.D.A.Y. — "Obsidian Glass" design tokens.
+   Monochrome, glass-layered, Material-3 semantic naming. Everything self-hosted;
+   the app makes zero external network requests. Components reference these vars
+   only — no hex literals downstream. */
 
+/* ---- Type: Geist (structure, display, mono-ish labels) + Inter (prose) ---- */
 @font-face {
-  font-family: 'Hanken Grotesk';
+  font-family: 'Geist';
   font-style: normal;
-  font-weight: 100 900;              /* variable font, one file */
+  font-weight: 100 900;              /* variable, one file */
   font-display: swap;
-  src: url('../fonts/hanken-grotesk.woff2') format('woff2');
+  src: url('../fonts/geist.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Zarathustra';        /* display face — headers & titles only */
+  font-family: 'Inter';
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 900;              /* variable, one file */
   font-display: swap;
-  src: url('../fonts/zarathustra-v01.otf') format('opentype');
+  src: url('../fonts/inter.woff2') format('woff2');
 }
 
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --surface: #131313;
-  --surface-container-lowest: #0e0e0e;
-  --surface-container-low: #1c1b1b;
-  --surface-container: #201f1f;
-  --surface-container-high: #2a2a2a;
-  --surface-variant: #353534;
-  --on-surface: #e5e2e1;
-  --on-surface-variant: #c8c6c6;
+
+  /* floor -> raised. Neutrals carry a whisper of green-grey so nothing reads
+     as pure black; pure #000 flattens the glass layering. */
+  --floor: #0a0b0b;
+  --surface: #121414;
+  --surface-container-lowest: #0d0e0f;
+  --surface-container-low: #1b1c1c;
+  --surface-container: #1f2020;
+  --surface-container-high: #292a2a;
+  --surface-container-highest: #343535;
+  --surface-variant: #343535;
+
+  --on-surface: #e3e2e2;
+  --on-surface-variant: #a4a7a8;
+  --on-surface-faint: #6c6f70;
+
   --outline: #8e9192;
   --outline-variant: #444748;
-  --primary: #e2e2e2;
-  --on-primary: #131313;
-  --hairline: rgba(255, 255, 255, 0.10);
+  --hairline: rgba(255, 255, 255, 0.09);
+  --hairline-strong: rgba(255, 255, 255, 0.18);
+
+  --primary: #ffffff;
+  --on-primary: #131414;
+  --inverse-primary: #5d5f5f;
+
   --danger: #ffb4ab;
+  --on-danger: #690005;
+  --danger-container: #93000a;
+
+  /* glass tiers — see "Elevation & Depth" in the design system */
+  --glass-surface: rgba(255, 255, 255, 0.045);
+  --glass-overlay: rgba(255, 255, 255, 0.10);
+  --glass-hover: rgba(255, 255, 255, 0.07);
+  --scrim: rgba(6, 7, 7, 0.72);
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
+
+  --floor: #ececeb;
   --surface: #f6f6f5;
   --surface-container-lowest: #ffffff;
-  --surface-container-low: #f0efee;
+  --surface-container-low: #f1f0ef;
   --surface-container: #e9e8e7;
   --surface-container-high: #e2e1e0;
+  --surface-container-highest: #dad9d8;
   --surface-variant: #d8d7d6;
+
   --on-surface: #1b1c1c;
-  --on-surface-variant: #444748;
+  --on-surface-variant: #4b4e4f;
+  --on-surface-faint: #75797a;
+
   --outline: #74777a;
   --outline-variant: #c4c7c8;
-  --primary: #2a2a2a;
-  --on-primary: #f6f6f5;
   --hairline: rgba(0, 0, 0, 0.10);
+  --hairline-strong: rgba(0, 0, 0, 0.22);
+
+  --primary: #131414;
+  --on-primary: #ffffff;
+  --inverse-primary: #9a9d9d;
+
   --danger: #ba1a1a;
+  --on-danger: #ffffff;
+  --danger-container: #ffdad6;
+
+  --glass-surface: rgba(255, 255, 255, 0.55);
+  --glass-overlay: rgba(255, 255, 255, 0.75);
+  --glass-hover: rgba(0, 0, 0, 0.04);
+  --scrim: rgba(230, 230, 229, 0.72);
 }
 
 :root {
-  /* radii */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* ---- Shape: "soft-technical". 4px is the house radius. ---- */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-full: 999px;
-  /* spacing */
-  --gap: 14px;
-  /* glass */
-  --blur-panel: 24px;
-  --blur-topbar: 14px;
-  --glass-fill: 55%;
-  /* type scale */
-  --text-display: clamp(1.75rem, 1.25rem + 2vw, 2.5rem);
-  --text-headline: 1.25rem;
+
+  /* ---- Rhythm: every gap is a multiple of 4px ---- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --gap: var(--s-4);
+
+  /* ---- Glass ---- */
+  --blur-surface: 20px;
+  --blur-overlay: 40px;
+
+  /* ---- Type scale ---- */
+  --font-display: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --text-display: clamp(2rem, 1.4rem + 2.6vw, 3rem);
+  --text-headline: clamp(1.375rem, 1.15rem + 0.9vw, 2rem);
+  --text-headline-sm: 1.25rem;
   --text-title: 1rem;
-  --text-body: 0.875rem;
+  --text-body: 1rem;
+  --text-body-sm: 0.875rem;
   --text-label: 0.75rem;
-  /* layout */
-  --rail-w: 200px;
-  --rail-w-collapsed: 72px;
-  --friday-w: 280px;
-  --topbar-h: 56px;
-  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Zarathustra', 'Hanken Grotesk', system-ui, sans-serif;
+  --tracking-label: 0.08em;
+  --tracking-tight: -0.02em;
+
+  /* ---- Layout ---- */
+  --rail-w: 232px;
+  --rail-w-collapsed: 68px;
+  --friday-w: 340px;
+  --topbar-h: 64px;
+  --content-max: 1200px;
+
+  /* ---- Motion: exponential deceleration, never bounce ---- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-slow: 420ms;
 }

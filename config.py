@@ -18,6 +18,10 @@ class Config:
     DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
     DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
     DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-flash")
+    # Comms by Osis — outbound SMS/iMessage. Empty ⇒ the send_sms tool returns a friendly error.
+    COMMS_API_KEY = os.environ.get("COMMS_OSIS_API", "")
+    # Cron shared secret (Vercel sends it as a bearer token). Empty ⇒ /api/cron/* refuses all.
+    CRON_SECRET = os.environ.get("CRON_SECRET", "")
     # Spec B — voice endpoint shared secret. Empty ⇒ /api/voice refuses every request (fail closed).
     VOICE_TOKEN = os.environ.get("VOICE_TOKEN", "")
     # Hard cap on any request body (Werkzeug rejects with 413 during parsing, before buffering).

@@ -9,8 +9,18 @@ def to_dict(row) -> dict:
     return dict(row)
 
 
-def list_notes() -> list[dict]:
-    return [to_dict(r) for r in query("SELECT * FROM notes ORDER BY created_at DESC, id DESC")]
+def list_notes(limit: int | None = None, offset: int = 0) -> list[dict]:
+    """Newest first. `limit` pages the list; None returns everything (agent recall)."""
+    sql = "SELECT * FROM notes ORDER BY created_at DESC, id DESC"
+    params: list = []
+    if limit is not None:
+        sql += " LIMIT %s OFFSET %s"
+        params += [limit, offset]
+    return [to_dict(r) for r in query(sql, tuple(params))]
+
+
+def count_notes() -> int:
+    return query("SELECT count(*) AS n FROM notes", one=True)["n"]
 
 
 def get_note(note_id: int):

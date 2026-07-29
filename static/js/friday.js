@@ -15,14 +15,51 @@
     return el;
   }
 
+  // History pages backwards: open on the last PAGE turns, fetch older on demand.
+  var PAGE = 40;
+  var oldestId = null;
+
+  function olderButton() {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'friday-older label-mono';
+    btn.textContent = 'Load earlier messages';
+    btn.addEventListener('click', async function () {
+      btn.disabled = true;
+      try {
+        var res = await fetch('/api/friday/history?limit=' + PAGE + '&before=' + oldestId);
+        var rows = await res.json();
+        btn.remove();
+        var anchor = list.firstChild;
+        rows.forEach(function (m) {
+          var el = document.createElement('div');
+          el.className = 'friday-msg ' + m.role;
+          el.textContent = m.content || '';
+          list.insertBefore(el, anchor);
+        });
+        if (rows.length) {
+          oldestId = rows[0].id;
+          if (rows.length === PAGE) list.insertBefore(olderButton(), list.firstChild);
+        }
+      } catch (e) {
+        btn.disabled = false;
+      }
+    });
+    return btn;
+  }
+
   function render(messages) {
     list.innerHTML = '';
     messages.forEach(function (m) { bubble(m.role, m.content); });
+    if (messages.length) {
+      oldestId = messages[0].id;
+      if (messages.length === PAGE) list.insertBefore(olderButton(), list.firstChild);
+    }
   }
 
   async function loadHistory() {
     try {
-      var res = await fetch('/api/friday/history');
+      var res = await fetch('/api/friday/history?limit=' + PAGE);
       render(await res.json());
     } catch (e) { /* offline: leave panel empty */ }
   }
@@ -92,6 +129,34 @@
     input.value = '';
     send(text);
   });
+
+  // Attachments: the server extracts text, the text goes out as a normal turn.
+  var fileInput = document.getElementById('friday-file');
+  var attachBtn = document.getElementById('friday-attach');
+  if (fileInput && attachBtn) {
+    attachBtn.addEventListener('click', function () { fileInput.click(); });
+    fileInput.addEventListener('change', async function () {
+      var file = fileInput.files[0];
+      if (!file) return;
+      fileInput.value = '';
+      var note = bubble('user', 'Reading ' + file.name + '…');
+      note.classList.add('is-pending');
+      var body = new FormData();
+      body.append('file', file);
+      try {
+        var res = await fetch('/api/friday/upload', { method: 'POST', body: body });
+        var data = await res.json();
+        note.remove();
+        if (!res.ok) return bubble('assistant', data.error || 'Upload failed').classList.add('is-error');
+        var question = input.value.trim() || 'Summarise this file.';
+        input.value = '';
+        send(question + '\n\n--- ' + data.name + ' ---\n' + data.text);
+      } catch (e) {
+        note.remove();
+        bubble('assistant', 'Upload failed.').classList.add('is-error');
+      }
+    });
+  }
 
   if (newBtn) newBtn.addEventListener('click', async function () {
     await fetch('/api/friday/clear', { method: 'POST' });
@@ -186,21 +251,10 @@
   var toggleBtn = document.getElementById('friday-toggle'); // button in topbar
   if (!panel) return;
 
-  var visible = true;
+  // Read initial state from server-rendered DOM — no fetch, no flash.
+  var visible = !panel.classList.contains('is-hidden');
 
-  async function loadPrefs() {
-    try {
-      var res = await fetch('/api/settings/ui');
-      var data = await res.json();
-      visible = data.friday_visible !== 'false';
-      applyFridayVisibility(visible, false); // no animation on init
-    } catch (e) {
-      // default visible
-      applyFridayVisibility(true, false);
-    }
-  }
-
-  function applyFridayVisibility(show, animate) {
+  function applyFridayVisibility(show) {
     visible = show;
     panel.classList.toggle('is-hidden', !visible);
     document.querySelector('.app-shell')?.classList.toggle('friday-hidden', !visible);
@@ -212,7 +266,7 @@
   }
 
   function toggleFriday() {
-    applyFridayVisibility(!visible, true);
+    applyFridayVisibility(!visible);
     fetch('/api/settings/ui', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -235,9 +289,7 @@
   // Listen for settings page changes
   window.addEventListener('friday-pref-changed', function (e) {
     if (e.detail && typeof e.detail.visible === 'boolean') {
-      applyFridayVisibility(e.detail.visible, true);
+      applyFridayVisibility(e.detail.visible);
     }
   });
-
-  loadPrefs();
 })();

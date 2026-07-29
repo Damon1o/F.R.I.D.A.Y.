@@ -19,7 +19,23 @@
   var threshold = parseFloat(localStorage.getItem('friday_wake_threshold')) || 0.5;
   var running = false, starting = false, ctx = null, stream = null, lastFire = 0;
 
+  // onnxruntime is ~1 MB of JS. Load it the first time the wake word actually
+  // turns on instead of on every page view.
+  function loadOrt() {
+    if (window.ort) return Promise.resolve();
+    if (loadOrt.pending) return loadOrt.pending;
+    loadOrt.pending = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = ORT + 'ort.wasm.min.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    return loadOrt.pending;
+  }
+
   async function build() {
+    await loadOrt();
     // Single-threaded so the page needs no COOP/COEP cross-origin isolation headers.
     ort.env.wasm.wasmPaths = ORT;
     ort.env.wasm.numThreads = 1;

@@ -13,7 +13,7 @@ from pages.todos import models as todos
 from pages.notes import models as notes
 from pages.search import models as search
 from pages.music import get_provider
-from pages.friday import facts, weather
+from pages.friday import facts, sms, weather
 
 _DT = "ISO-8601 datetime, e.g. 2026-07-24T15:00:00. Assume the user's local time."
 _RRULE = "RFC-5545 RRULE for repeats, e.g. FREQ=WEEKLY;BYDAY=MO,WE,FR. Omit for one-off events."
@@ -110,6 +110,13 @@ TOOLS = [
         "country": {"type": "string", "description": "ISO-3166 alpha-2 code; defaults to US."},
         "year": {"type": "integer", "description": "Defaults to the current year."},
     }, []),
+    _fn("send_sms", "Send a text message (SMS or iMessage) to a phone number. Only call this "
+                    "once the user has confirmed both the recipient and the exact wording.", {
+        "to": {"type": "string", "description": "Recipient phone number in E.164, e.g. +12125550147."},
+        "body": {"type": "string", "description": "The message text to send."},
+        "channel": {"type": "string", "enum": ["sms", "imessage"],
+                    "description": "Optional; the service picks the best channel if omitted."},
+    }, ["to", "body"]),
     _fn("remember", "Store a free-form note/fact the user wants remembered.", {
         "text": {"type": "string"},
     }, ["text"]),
@@ -168,6 +175,8 @@ def dispatch(name: str, args: dict):
             return facts.convert_currency(args["amount"], args["base"], args["target"])
         if name == "list_holidays":
             return facts.list_holidays(args.get("country", "US"), args.get("year"))
+        if name == "send_sms":
+            return sms.send_sms(args["to"], args["body"], args.get("channel"))
         if name == "remember":
             return notes.create_note(args["text"])
         if name == "recall":

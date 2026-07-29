@@ -1,8 +1,14 @@
-"""Music API routes: now playing, controls, Spotify OAuth."""
-from flask import Blueprint, jsonify, request, redirect, session, current_app
+"""Music page + API routes: now playing, controls, Spotify OAuth."""
+from flask import Blueprint, jsonify, request, redirect, session, current_app, render_template
 from pages.music import get_provider
 
 music_bp = Blueprint("music", __name__)
+
+
+@music_bp.route("/music")
+def music_page():
+    return render_template("music.html")
+
 
 @music_bp.route("/api/music/now-playing")
 def now_playing():

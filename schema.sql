@@ -56,8 +56,9 @@ CREATE TABLE IF NOT EXISTS undo_log (
     payload      TEXT,
     created_at   TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
 );
-CREATE INDEX IF NOT EXISTS undo_log_session_id_idx ON undo_log (session_id, id DESC);
 
+-- Migration runs BEFORE the index: on a pre-session_id table the index would
+-- reference a column that does not exist yet and abort the whole schema run.
 -- Migration: replace legacy single-row undo_log (id=1 CHECK) with append-only version.
 DO $$
 BEGIN
@@ -85,3 +86,14 @@ BEGIN
         CREATE INDEX IF NOT EXISTS undo_log_session_id_idx ON undo_log (session_id, id DESC);
     END IF;
 END $$;
+
+CREATE INDEX IF NOT EXISTS undo_log_session_id_idx ON undo_log (session_id, id DESC);
+
+-- Indexes for the queries the app actually runs: date-window event lookups,
+-- open/overdue task filters, and newest-first note/message paging.
+CREATE INDEX IF NOT EXISTS events_start_at_idx  ON events   (start_at);
+CREATE INDEX IF NOT EXISTS todos_done_due_idx   ON todos    (done, due_at);
+CREATE INDEX IF NOT EXISTS todos_completed_idx  ON todos    (completed_at);
+CREATE INDEX IF NOT EXISTS todos_tag_idx        ON todos    (tag);
+CREATE INDEX IF NOT EXISTS notes_created_at_idx ON notes    (created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS messages_id_idx      ON messages (id DESC);

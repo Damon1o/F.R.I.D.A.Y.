@@ -70,6 +70,16 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     def _ensure_session():
         _get_session_id()
 
+    @app.before_request
+    def _load_ui_prefs():
+        from core.db import query
+        row = query("SELECT value FROM settings WHERE key = 'friday_visible'", one=True)
+        g.friday_visible = row["value"] if row else "false"
+
+    @app.context_processor
+    def _inject_ui_prefs():
+        return {"friday_visible": getattr(g, "friday_visible", "false")}
+
     @app.after_request
     def _set_session_cookie(resp):
         if hasattr(g, "session_id"):

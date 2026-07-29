@@ -1,10 +1,13 @@
 import pytest
 
 PAGES = {
-    "/": b"Today's events",
+    "/": b"This week",
     "/calendar": b"cal-grid",
-    "/todos": b"Master List",
-    "/settings": b"Settings",
+    "/todos": b"Pending operations",
+    "/notes": b"Remembered",
+    "/friday": b"friday-messages",
+    "/music": b"Acoustics",
+    "/settings": b"System parameters",
 }
 
 

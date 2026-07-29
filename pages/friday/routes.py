@@ -1,12 +1,19 @@
 """F.R.I.D.A.Y. assistant: streaming chat endpoint + history/clear."""
 import json
 
-from flask import Blueprint, Response, jsonify, request, stream_with_context, g
+from flask import Blueprint, Response, jsonify, render_template, request, stream_with_context, g
 
 from core import undo
+from core.files import UnsupportedFile, extract
 from pages.friday import agent, messages
 
 friday_bp = Blueprint("friday", __name__)
+
+
+@friday_bp.route("/friday")
+def friday_page():
+    """Full-window conversation. The shell's side panel is suppressed here."""
+    return render_template("friday.html")
 
 
 @friday_bp.route("/api/undo", methods=["POST"])
@@ -39,10 +46,28 @@ def quickadd():
     return jsonify(agent.run_text(text))
 
 
+@friday_bp.route("/api/friday/upload", methods=["POST"])
+def upload():
+    """Extract an attachment's text and hand it back. Nothing is stored on disk —
+    the client sends the text as the next message, so the normal stream applies."""
+    f = request.files.get("file")
+    if f is None or not f.filename:
+        return jsonify({"error": "no file"}), 400
+    try:
+        text = extract(f.filename, f.read())
+    except UnsupportedFile as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify({"name": f.filename, "chars": len(text), "text": text})
+
+
 @friday_bp.route("/api/friday/history", methods=["GET"])
 def history():
-    shown = [{"role": m["role"], "content": m["content"]}
-             for m in messages.history()
+    """Newest `limit` turns; `before` pages backwards for older history."""
+    limit = request.args.get("limit", type=int)
+    before = request.args.get("before", type=int)
+    rows = messages.history(limit=limit, before_id=before)
+    shown = [{"id": m["id"], "role": m["role"], "content": m["content"]}
+             for m in rows
              if m["content"] and m["role"] in ("user", "assistant")]
     return jsonify(shown)
 

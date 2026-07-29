@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}F.R.I.D.A.Y.{% endblock %}
+{% block topbar %}Assistant{% endblock %}
+
+{# No side panel here: the conversation owns the window. friday.js binds by id,
+   and its visibility module bails out when no .friday element exists. #}
+{% block assistant %}{% endblock %}
+{% block shell_mod %}friday-hidden no-panel{% endblock %}
+{% block content_mod %}chat-view{% endblock %}
+
+{% block content %}
+<section class="chat-page">
+  <header class="chat-head">
+    <div>
+      <h1 class="display">F.R.I.D.A.Y.</h1>
+      <p class="subtle">Ask for anything across your events, tasks, notes and music.</p>
+    </div>
+    <span class="label-mono" id="friday-state"><i class="pulse" aria-hidden="true"></i>Online</span>
+    <button class="icon-btn" id="friday-new" type="button" aria-label="New chat" title="New chat">
+      {{ icon('square-pen', 16) }}
+    </button>
+  </header>
+
+  <div class="chat-body friday-body" id="friday-messages" aria-live="polite"></div>
+
+  <form class="chat-input friday-input" id="friday-form">
+    <input type="text" id="friday-text" placeholder="Command F.R.I.D.A.Y.…" autocomplete="off" autofocus>
+    <input type="file" id="friday-file" hidden
+      accept=".txt,.md,.csv,.tsv,.json,.yaml,.yml,.log,.xml,.html,.py,.js,.sql,.pdf,.docx">
+    <button class="icon-btn" id="friday-attach" type="button" aria-label="Attach a file" title="Attach a file">
+      {{ icon('paperclip', 16) }}
+    </button>
+    <button class="icon-btn" id="friday-voice" type="button" hidden aria-label="Hold to talk" title="Talk">
+      {{ icon('mic', 16) }}
+    </button>
+    <button class="icon-btn is-send" type="submit" aria-label="Send">{{ icon('send', 16) }}</button>
+  </form>
+
+  <p class="chat-hint label-mono">Say &ldquo;Hey Friday&rdquo; &middot; searches events, tasks and notes</p>
+</section>
+{% endblock %}

@@ -7,15 +7,25 @@ from pages.notes.models import ValidationError
 notes_bp = Blueprint("notes", __name__)
 
 
+PAGE = 30  # first screenful; the rest streams in as the list is scrolled
+
+
 @notes_bp.route("/notes")
 def notes_page():
-    return render_template("notes.html", notes=models.list_notes())
+    total = models.count_notes()
+    return render_template(
+        "notes.html", notes=models.list_notes(limit=PAGE), total=total, page_size=PAGE,
+    )
 
 
 @notes_bp.route("/api/notes", methods=["GET"])
 def notes_list():
     q = request.args.get("q")
-    return jsonify(models.search_notes(q) if q else models.list_notes())
+    if q:
+        return jsonify(models.search_notes(q))
+    limit = request.args.get("limit", type=int)
+    offset = request.args.get("offset", type=int) or 0
+    return jsonify(models.list_notes(limit=limit, offset=offset))
 
 
 @notes_bp.route("/api/notes", methods=["POST"])

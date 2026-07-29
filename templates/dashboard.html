@@ -1,25 +1,30 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard · F.R.I.D.A.Y.{% endblock %}
-{% block topbar %}Dashboard{% endblock %}
+{% block topbar %}Assistant Hub{% endblock %}
 
 {% block content %}
-{# ---- Top widget bar: live clock, date, weather ---- #}
-<section class="widget-bar" aria-label="Dashboard widgets">
-  <div class="widget glass" data-widget="clock" aria-live="polite">
+<section class="hero">
+  <h1 class="display">Overview</h1>
+  <p class="subtle">{{ today.strftime('%A, %B %d') }} — everything on deck right now.</p>
+</section>
+
+{# ---- Live strip: clock, date, weather ---- #}
+<section class="widget-bar" aria-label="Live status">
+  <div class="widget" data-widget="clock" aria-live="polite">
     <span class="widget-icon">{{ icon('clock', 18) }}</span>
     <div class="widget-content">
       <div class="widget-value" data-clock>--:--:--</div>
-      <div class="widget-label">Live Clock</div>
+      <div class="widget-label">Local time</div>
     </div>
   </div>
-  <div class="widget glass" data-widget="date">
+  <div class="widget" data-widget="date">
     <span class="widget-icon">{{ icon('calendar', 18) }}</span>
     <div class="widget-content">
       <div class="widget-value" data-date>{{ today.strftime('%A, %B %d, %Y') }}</div>
       <div class="widget-label">Today</div>
     </div>
   </div>
-  <div class="widget glass" data-widget="weather" id="weather-widget">
+  <div class="widget" data-widget="weather" id="weather-widget">
     <span class="widget-icon">{{ icon('cloud', 18) }}</span>
     <div class="widget-content">
       <div class="widget-value" data-weather-temp>--°</div>
@@ -32,35 +37,10 @@
   </div>
 </section>
 
-<section class="hero">
-  <h1 class="display">Overview</h1>
-  <p class="subtle">{{ today.strftime('%A, %B %d') }}</p>
-</section>
-
-{# ---- Stat tiles (display only) ---- #}
-<section class="stat-row four">
-  <div class="stat glass is-lead">
-    <span class="stat-num">{{ stats.events }}</span>
-    <span class="stat-label">Today's events</span>
-  </div>
-  <div class="stat glass">
-    <span class="stat-num">{{ stats.open }}</span>
-    <span class="stat-label">Open tasks</span>
-  </div>
-  <div class="stat glass">
-    <span class="stat-num">{{ stats.overdue }}</span>
-    <span class="stat-label">Overdue</span>
-  </div>
-  <div class="stat glass">
-    <span class="stat-num">{{ stats.completed }}</span>
-    <span class="stat-label">Done this week</span>
-  </div>
-</section>
-
-{# ---- This week: schedule load bars + breakdown ---- #}
-<section class="card glass" aria-labelledby="week-h">
+{# ---- Week load + task breakdown ---- #}
+<section class="card" aria-labelledby="week-h">
   <div class="card-head">
-    <h3 id="week-h">{{ icon('calendar', 18) }} This week</h3>
+    <h3 id="week-h">{{ icon('activity', 18) }} This week</h3>
     <span class="tag">Mon–Sun</span>
   </div>
   <div class="week-split">
@@ -82,22 +62,11 @@
 </section>
 
 <div class="bento">
-  {# ---- Now Playing ---- #}
-  <section class="card glass music-card" aria-labelledby="music-h" id="music-widget">
+  {# ---- Upcoming ---- #}
+  <section class="card" aria-labelledby="up-h">
     <div class="card-head">
-      <h3 id="music-h">{{ icon('music', 18) }} Now Playing</h3>
-      <span class="tag" id="music-provider-tag">Spotify</span>
-    </div>
-    <div class="music-content" id="music-content">
-      <div class="music-loading">{{ icon('loader', 20) }} Connecting…</div>
-    </div>
-  </section>
-
-  {# ---- Upcoming events ---- #}
-  <section class="card glass" aria-labelledby="up-h">
-    <div class="card-head">
-      <h3 id="up-h">{{ icon('list-todo', 18) }} Upcoming</h3>
-      <a class="tag" href="{{ url_for('calendar.calendar_page') }}">View calendar</a>
+      <h3 id="up-h">{{ icon('calendar', 18) }} Upcoming</h3>
+      <a class="tag" href="{{ url_for('calendar.calendar_page') }}">Calendar {{ icon('arrow-right', 12) }}</a>
     </div>
     <ul class="agenda">
       {% for e in upcoming %}
@@ -106,13 +75,24 @@
         <span class="agenda-title">{{ e.title }}</span>
       </li>
       {% else %}
-      <li class="empty">Nothing coming up.</li>
+      <li class="empty">Nothing coming up. Ask F.R.I.D.A.Y. to schedule something.</li>
       {% endfor %}
     </ul>
   </section>
 
-  {# ---- Timer widget ---- #}
-  <section class="card glass timer-card" aria-labelledby="timer-h">
+  {# ---- Now playing ---- #}
+  <section class="card music-card" aria-labelledby="music-h" id="music-widget">
+    <div class="card-head">
+      <h3 id="music-h">{{ icon('music', 18) }} Now playing</h3>
+      <span class="tag" id="music-provider-tag">Spotify</span>
+    </div>
+    <div class="music-content" id="music-content">
+      <div class="music-loading">{{ icon('loader', 18) }} Connecting…</div>
+    </div>
+  </section>
+
+  {# ---- Timer ---- #}
+  <section class="card timer-card" aria-labelledby="timer-h">
     <div class="card-head">
       <h3 id="timer-h">{{ icon('clock', 18) }} Timer</h3>
     </div>
@@ -127,13 +107,20 @@
         <button type="button" class="btn-preset" data-min="60">60m</button>
       </div>
       <div class="timer-custom">
-        <input type="number" id="timer-custom-min" min="1" max="1440" placeholder="Custom minutes" aria-label="Custom minutes">
-        <button type="button" class="btn-primary" id="timer-set-custom">Set</button>
+        <input type="number" id="timer-custom-min" min="1" max="1440" placeholder="Custom minutes"
+          aria-label="Custom minutes">
+        <button type="button" class="btn-ghost" id="timer-set-custom">Set</button>
       </div>
       <div class="timer-controls">
-        <button type="button" class="btn-primary" id="timer-start" aria-label="Start timer">{{ icon('play', 18) }} Start</button>
-        <button type="button" class="btn-primary" id="timer-pause" hidden aria-label="Pause timer">{{ icon('pause', 18) }} Pause</button>
-        <button type="button" class="icon-btn" id="timer-reset" aria-label="Reset timer">{{ icon('rotate-ccw', 18) }}</button>
+        <button type="button" class="btn-primary" id="timer-start" aria-label="Start timer">
+          {{ icon('play', 16) }} Start
+        </button>
+        <button type="button" class="btn-primary" id="timer-pause" hidden aria-label="Pause timer">
+          {{ icon('pause', 16) }} Pause
+        </button>
+        <button type="button" class="icon-btn" id="timer-reset" aria-label="Reset timer">
+          {{ icon('rotate-ccw', 16) }}
+        </button>
       </div>
     </div>
   </section>

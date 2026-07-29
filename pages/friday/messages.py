@@ -12,9 +12,22 @@ def add(role, content=None, *, tool_calls=None, tool_call_id=None, name=None) ->
     )
 
 
-def history() -> list[dict]:
-    """Raw stored rows, oldest first (for the UI; it filters to displayable text)."""
-    return [dict(r) for r in query("SELECT * FROM messages ORDER BY id")]
+def history(limit: int | None = None, before_id: int | None = None) -> list[dict]:
+    """Raw stored rows, oldest first (for the UI; it filters to displayable text).
+
+    `limit` takes the newest N rows; `before_id` pages backwards from there, so the
+    panel opens on the tail of a long thread instead of replaying thousands of rows.
+    """
+    if limit is None and before_id is None:
+        return [dict(r) for r in query("SELECT * FROM messages ORDER BY id")]
+    sql = "SELECT * FROM messages"
+    params: list = []
+    if before_id is not None:
+        sql += " WHERE id < %s"
+        params.append(before_id)
+    sql += " ORDER BY id DESC LIMIT %s"
+    params.append(limit or 50)
+    return [dict(r) for r in reversed(list(query(sql, tuple(params))))]
 
 
 def to_api(limit=None) -> list[dict]:

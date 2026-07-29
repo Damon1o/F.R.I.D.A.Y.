@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Music · F.R.I.D.A.Y.{% endblock %}
+{% block topbar %}Music{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="display">Acoustics</h1>
+    <p class="subtle">Active stream metadata and transport control.</p>
+  </div>
+  <span class="tag" id="music-provider-tag">Spotify</span>
+</section>
+
+<div class="music-layout">
+  <section class="card" id="music-widget" aria-labelledby="player-h">
+    <div class="card-head">
+      <h3 id="player-h">{{ icon('disc-3', 18) }} Now playing</h3>
+      <span class="label-mono"><i class="pulse" aria-hidden="true"></i>Live</span>
+    </div>
+    <div class="music-content" id="music-content">
+      <div class="music-loading">{{ icon('loader', 18) }} Connecting…</div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="src-h">
+    <div class="card-head">
+      <h3 id="src-h">{{ icon('volume-2', 18) }} Source</h3>
+    </div>
+    <div class="setting-row">
+      <div>
+        <strong>Spotify</strong>
+        <p class="subtle">Playback control needs Premium. Read-only otherwise.</p>
+      </div>
+      <span class="pill" id="music-page-status">Checking…</span>
+    </div>
+    <div class="setting-row">
+      <div>
+        <strong>Voice control</strong>
+        <p class="subtle">Say &ldquo;Hey Friday, play something&rdquo; — the assistant drives the same transport.</p>
+      </div>
+    </div>
+    <a class="btn-ghost" href="{{ url_for('settings.settings_page') }}">
+      {{ icon('settings', 16) }} Manage connection
+    </a>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/music.js') }}"></script>
+<script>
+  // Connection badge — same endpoint the settings page uses.
+  fetch('/api/music/status?service=spotify')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('music-page-status').textContent = d.connected ? 'Connected' : 'Not connected';
+    })
+    .catch(() => {
+      document.getElementById('music-page-status').textContent = 'Unavailable';
+    });
+</script>
+{% endblock %}

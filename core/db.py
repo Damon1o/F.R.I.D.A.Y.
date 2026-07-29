@@ -40,6 +40,15 @@ def execute(sql: str, params=()):
     return cur
 
 
+def rollback() -> None:
+    """Clear a failed transaction. Postgres refuses every later statement on the
+    connection until this runs, so swallowing an error without it poisons the
+    rest of the request."""
+    db = g.get("db")
+    if db is not None:
+        db.rollback()
+
+
 def init_app(app) -> None:
     # No eager connect: on serverless a DB hiccup here would crash the whole
     # function import and 500 every route. Schema is owned by the migration

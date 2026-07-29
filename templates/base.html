@@ -6,70 +6,109 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}F.R.I.D.A.Y.{% endblock %}</title>
   <link rel="icon" href="{{ url_for('static', filename='images/friday.svg') }}" type="image/svg+xml">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="{{ url_for('static', filename='fonts/geist.woff2') }}">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="{{ url_for('static', filename='fonts/inter.woff2') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 
 <body>
-  <div class="app-shell">
-    {# ---- Left rail: nav ---- #}
-    <aside class="rail glass" id="nav-rail" aria-label="Primary navigation">
-      <div class="rail-brand">
+  <div class="app-shell {{ 'friday-hidden' if friday_visible == 'false' }} {% block shell_mod %}{% endblock %}">
+
+    {# ================= Side nav ================= #}
+    <aside class="rail" id="nav-rail" aria-label="Primary navigation">
+      <a class="rail-brand" href="{{ url_for('dashboard.index') }}">
+        {# <img>, not an inlined SVG: the logo file is ~180KB and would ship on every page. #}
         <span class="brand-mark">
-          {{ logo() }}
+          <img class="brand-logo" src="{{ url_for('static', filename='images/friday.svg') }}" alt="" width="20"
+            height="20">
         </span>
-        <span class="brand-text">F.R.I.D.A.Y.<small>Productivity</small></span>
-      </div>
-      <nav class="nav">
-        {% set page = request.endpoint %}
-        <a class="nav-link {{ 'is-active' if page == 'dashboard.index' }}" href="{{ url_for('dashboard.index') }}">
-          {{ icon('layout-dashboard') }}<span>Dashboard</span>
+        <span class="brand-text">
+          <strong>F.R.I.D.A.Y.</strong>
+          <small class="label-mono"><i class="pulse" aria-hidden="true"></i>Active session</small>
+        </span>
+      </a>
+
+      {% set page = request.endpoint %}
+      {% set nav_items = [
+        ('dashboard.index',        'layout-dashboard', 'Dashboard'),
+        ('calendar.calendar_page', 'calendar',         'Calendar'),
+        ('todos.todos_page',       'circle-check-big', 'Tasks'),
+        ('notes.notes_page',       'file-text',        'Notes'),
+        ('friday.friday_page',     'message-square',   'Assistant'),
+        ('music.music_page',       'music',            'Music'),
+      ] %}
+
+      <nav class="nav" aria-label="Sections">
+        {% for endpoint, ico, label in nav_items %}
+        <a class="nav-link {{ 'is-active' if page == endpoint }}" href="{{ url_for(endpoint) }}"
+          {{ 'aria-current=page' if page == endpoint }}>
+          {{ icon(ico, 20) }}<span>{{ label }}</span>
         </a>
-        <a class="nav-link {{ 'is-active' if page == 'calendar.calendar_page' }}"
-          href="{{ url_for('calendar.calendar_page') }}">
-          {{ icon('calendar') }}<span>Calendar</span>
-        </a>
-        <a class="nav-link {{ 'is-active' if page == 'todos.todos_page' }}" href="{{ url_for('todos.todos_page') }}">
-          {{ icon('list-todo') }}<span>Tasks</span>
-        </a>
+        {% endfor %}
+      </nav>
+
+      <nav class="nav nav-foot" aria-label="System">
         <a class="nav-link {{ 'is-active' if page == 'settings.settings_page' }}"
-          href="{{ url_for('settings.settings_page') }}">
-          {{ icon('settings') }}<span>Settings</span>
+          href="{{ url_for('settings.settings_page') }}"
+          {{ 'aria-current=page' if page == 'settings.settings_page' }}>
+          {{ icon('settings', 20) }}<span>Settings</span>
         </a>
       </nav>
     </aside>
 
-    {# ---- Center: topbar + page content ---- #}
+    {# ================= Top nav + page ================= #}
     <div class="main-col">
-      <header class="topbar glass">
-        <div class="topbar-title">{% block topbar %}{% endblock %}</div>
+      <header class="topbar">
+        <button class="icon-btn topbar-rail-toggle" id="nav-toggle" type="button" aria-label="Toggle navigation"
+          aria-expanded="true">{{ icon('panel-left', 18) }}</button>
+
+        <h1 class="topbar-title">{% block topbar %}Assistant Hub{% endblock %}</h1>
+
+        {# Live search: no dedicated page any more, results drop from the field. #}
+        <div class="topbar-search-wrap">
+          <form class="topbar-search" id="search-form" role="search" autocomplete="off">
+            {{ icon('search', 16) }}
+            <input type="search" id="search-input" name="q" placeholder="Search events, tasks, notes…"
+              aria-label="Search everything" aria-expanded="false" aria-controls="search-results">
+          </form>
+          <div class="search-pop" id="search-results" role="listbox" hidden></div>
+        </div>
+
         <div class="topbar-actions">
-          <button class="icon-btn" id="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="true">
-            {{ icon('layout-dashboard', 18) }}
-          </button>
+          <span class="status-chip label-mono" aria-live="polite">
+            <i class="pulse" aria-hidden="true"></i>Nominal
+          </span>
           <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle theme">
-            {{ icon('circle-check-big', 18) }}
+            {{ icon('sun', 18) }}
           </button>
-          <button class="icon-btn" id="friday-toggle" type="button" aria-label="Hide F.R.I.D.A.Y. panel"
-            aria-expanded="true">
-            {{ icon('chevron-left', 18) }}
-          </button>
+          <a class="icon-btn" href="{{ url_for('settings.settings_page') }}" aria-label="Account and preferences">
+            {{ icon('circle-user', 18) }}
+          </a>
+          <button class="icon-btn" id="friday-toggle" type="button"
+            aria-label="{{ 'Show' if friday_visible == 'false' else 'Hide' }} F.R.I.D.A.Y. panel"
+            aria-expanded="{{ 'false' if friday_visible == 'false' else 'true' }}">{{ icon('message-square', 18) }}</button>
         </div>
       </header>
-      <main class="content">
+
+      <main class="content {% block content_mod %}{% endblock %}">
         {% block content %}{% endblock %}
       </main>
     </div>
 
-    {# ---- Right rail: always-on F.R.I.D.A.Y. panel (inert in Phase 1) ---- #}
-    {% include '_friday_panel.html' %}
+    {# ================= Assistant panel ================= #}
+    {# /friday overrides this to empty — one conversation on screen, not two. #}
+    {% block assistant %}{% include '_friday_panel.html' %}{% endblock %}
   </div>
 
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/search.js') }}"></script>
   <script src="{{ url_for('static', filename='js/friday.js') }}"></script>
   <script src="{{ url_for('static', filename='js/voice-web.js') }}"></script>
-  <script src="{{ url_for('static', filename='vendor/ort/ort.wasm.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/wakeword.js') }}"></script>
+  {# onnxruntime is injected by wakeword.js on first use — see loadOrt(). #}
+  <script src="{{ url_for('static', filename='js/wakeword.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 
