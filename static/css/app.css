@@ -812,6 +812,38 @@ input[type='range']::-moz-range-thumb {
 
 .item-meta { flex: none; color: var(--on-surface-faint); }
 
+/* Rename/delete stay out of the way until the row is hovered or keyboard-selected.
+   Touch has no hover, so there they are always shown. */
+.item-actions {
+  flex: none;
+  display: flex;
+  gap: var(--s-2);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.scroll-list .item:hover .item-actions,
+.scroll-list .item.selected .item-actions,
+.item-actions:focus-within { opacity: 1; }
+
+@media (hover: none) {
+  .item-actions { opacity: 1; }
+}
+
+.icon-btn.is-confirm { color: var(--danger); border-color: var(--danger); }
+
+.item-rename {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-body-sm);
+  color: var(--on-surface);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--outline-variant);
+  padding: 0;
+  outline: none;
+}
+
 .scroll-list .empty { padding: var(--s-4); color: var(--on-surface-faint); }
 
 .top-gradient, .bottom-gradient {

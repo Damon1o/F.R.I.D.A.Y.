@@ -17,6 +17,10 @@ class FakeClient:
 
     def complete(self, messages, tools=None):
         self.calls += 1
+        # run_turn makes one extra tool-free call to auto-title a new thread; scripts
+        # in these tests only cover the reply, so anything past the script is a title.
+        if not self.scripted:
+            return {"role": "assistant", "content": "Scripted Chat Title"}
         return self.scripted.pop(0)
 
 

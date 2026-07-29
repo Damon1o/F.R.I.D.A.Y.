@@ -87,6 +87,17 @@ def open_thread():
     return jsonify({"id": new})
 
 
+@friday_bp.route("/api/friday/thread/<int:thread_id>", methods=["PATCH", "DELETE"])
+def edit_thread(thread_id):
+    """PATCH `{"title": "..."}` renames a conversation; DELETE removes it entirely."""
+    if request.method == "DELETE":
+        return jsonify({"current": messages.delete(thread_id)})
+    title = ((request.get_json(silent=True) or {}).get("title") or "").strip()
+    if not title:
+        return jsonify({"error": "empty title"}), 400
+    return jsonify({"title": messages.set_title(thread_id, title[:60])})
+
+
 @friday_bp.route("/api/friday/clear", methods=["POST"])
 def clear():
     messages.clear()

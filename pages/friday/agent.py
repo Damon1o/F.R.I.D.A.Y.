@@ -48,6 +48,28 @@ def _args(tool_call) -> dict:
         return {}
 
 
+def _autotitle(client) -> str | None:
+    """Name the conversation from its first exchange. One extra, tool-free call, and
+    only on the first user turn of an untitled thread — later turns cost nothing."""
+    thread = messages.current_thread()
+    if messages.title(thread):
+        return None
+    convo = [m for m in messages.to_api()
+             if m["role"] in ("user", "assistant") and m.get("content")]
+    if sum(1 for m in convo if m["role"] == "user") != 1:
+        return None
+    try:
+        msg = client.complete([
+            {"role": "system", "content": "Title this conversation in 3-5 words. "
+                                          "Reply with the title only — no quotes, no punctuation."},
+            *convo[:2],
+        ])
+    except LLMError:
+        return None  # a missing key or provider blip must not break the reply
+    text = (msg.get("content") or "").strip().strip('"').strip()[:60]
+    return messages.set_title(thread, text) if text else None
+
+
 def run_turn(user_text: str, client=None):
     """Persist the user turn, drive the loop, yield (event, payload) frames."""
     client = client or DeepSeekClient()
@@ -75,6 +97,11 @@ def run_turn(user_text: str, client=None):
             yield "error", {"text": "F.R.I.D.A.Y. couldn't finish that in time."}
     except LLMError as e:
         yield "error", {"text": _llm_error(e)}
+    # Before "done" on purpose: a client that closes the stream on "done" would kill
+    # this generator mid-call and the thread would stay untitled.
+    name = _autotitle(client)
+    if name:
+        yield "title", {"text": name}
     yield "done", {}
 
 

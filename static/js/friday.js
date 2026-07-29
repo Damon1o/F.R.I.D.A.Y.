@@ -170,7 +170,7 @@
   // ---- Past conversations: AnimatedList (React Bits) ported to vanilla ----
   // IntersectionObserver drives the scale/fade, the gradients track scroll
   // position, arrows + Enter navigate. Same behaviour, no React, no motion dep.
-  function animatedList(container, items, onSelect) {
+  function animatedList(container, items, onSelect, onRename, onDelete) {
     var view = container.querySelector('.scroll-list');
     var top = container.querySelector('.top-gradient');
     var bottom = container.querySelector('.bottom-gradient');
@@ -207,6 +207,37 @@
       }
     }
 
+    // Rename in place: the title swaps for an input, Enter/blur saves, Escape cancels.
+    // Keydown stops here or the list's own arrow/Enter handler would hijack typing.
+    function rename(text, item) {
+      var input = document.createElement('input');
+      input.className = 'item-rename';
+      input.value = item.title;
+      text.replaceWith(input);
+      input.focus();
+      input.select();
+      var closed = false;
+      function finish(save) {
+        if (closed) return;
+        closed = true;
+        var value = input.value.trim();
+        input.replaceWith(text);
+        if (!save || !value || value === item.title) return;
+        item.title = value;
+        text.textContent = value;
+        onRename(item, value);
+      }
+      input.addEventListener('click', function (e) { e.stopPropagation(); });
+      input.addEventListener('blur', function () { finish(true); });
+      input.addEventListener('keydown', function (e) {
+        e.stopPropagation();
+        if (e.key === 'Enter') finish(true);
+        else if (e.key === 'Escape') finish(false);
+      });
+    }
+
+    var tpl = document.getElementById('thread-actions');
+
     items.forEach(function (item, i) {
       var el = document.createElement('div');
       el.className = 'item' + (item.current ? ' is-current' : '');
@@ -220,6 +251,17 @@
       meta.textContent = item.meta || '';
       el.appendChild(text);
       el.appendChild(meta);
+      if (tpl && onRename && onDelete) {
+        var acts = tpl.content.firstElementChild.cloneNode(true);
+        acts.addEventListener('click', function (e) { e.stopPropagation(); });
+        acts.querySelector('[data-rename]').addEventListener('click', function () {
+          rename(text, item);
+        });
+        acts.querySelector('[data-delete]').addEventListener('click', function (e) {
+          onDelete(item, e.currentTarget);
+        });
+        el.appendChild(acts);
+      }
       el.addEventListener('mouseenter', function () { select(i, false); });
       el.addEventListener('click', function () { select(i, false); onSelect(item, i); });
       view.appendChild(el);
@@ -282,7 +324,31 @@
         histBtn.setAttribute('aria-expanded', 'false');
         oldestId = null;
         loadHistory();
-      });
+      }, function (item, title) {
+        fetch('/api/friday/thread/' + item.id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title }),
+        });
+      }, deleteThread);
+    }
+
+    // Two-click confirm instead of window.confirm — a modal dialog blocks the page,
+    // and deleting a conversation on a stray click is not recoverable.
+    async function deleteThread(item, btn) {
+      if (!btn.classList.contains('is-confirm')) {
+        btn.classList.add('is-confirm');
+        btn.setAttribute('aria-label', 'Confirm delete');
+        setTimeout(function () {
+          btn.classList.remove('is-confirm');
+          btn.setAttribute('aria-label', 'Delete chat');
+        }, 3000);
+        return;
+      }
+      await fetch('/api/friday/thread/' + item.id, { method: 'DELETE' });
+      await loadThreads();
+      oldestId = null;
+      loadHistory();
     }
 
     histBtn.addEventListener('click', async function () {

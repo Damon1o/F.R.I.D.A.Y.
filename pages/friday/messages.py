@@ -31,13 +31,37 @@ def new_thread() -> int:
     return set_thread(int(row["t"]) + 1)
 
 
+def title(thread_id: int) -> str | None:
+    """Stored name of a conversation, or None while it is still untitled.
+
+    Names live in `settings` under `thread_title:N` — no threads table needed, and
+    an untitled thread just falls back to its first user message.
+    """
+    row = query("SELECT value FROM settings WHERE key = %s",
+                (f"thread_title:{thread_id}",), one=True)
+    return row["value"] if row else None
+
+
+def set_title(thread_id: int, text: str) -> str:
+    execute(
+        "INSERT INTO settings (key, value) VALUES (%s, %s) "
+        "ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+        (f"thread_title:{thread_id}", text),
+    )
+    return text
+
+
 def threads() -> list[dict]:
-    """One row per conversation, newest first, titled by its first user message."""
+    """One row per conversation, newest first. Stored name wins; else first user message."""
     rows = query(
         "SELECT DISTINCT ON (thread_id) thread_id, content, created_at FROM messages "
         "WHERE role = 'user' AND content <> '' ORDER BY thread_id DESC, id"
     )
-    return [{"id": r["thread_id"], "title": r["content"], "created_at": r["created_at"]}
+    names = {r["key"]: r["value"] for r in
+             query("SELECT key, value FROM settings WHERE key LIKE %s", ("thread_title:%",))}
+    return [{"id": r["thread_id"],
+             "title": names.get(f"thread_title:{r['thread_id']}") or r["content"],
+             "created_at": r["created_at"]}
             for r in rows]
 
 
@@ -102,3 +126,14 @@ def to_api(limit=None) -> list[dict]:
 def clear() -> None:
     """Delete the open conversation. Other threads are untouched."""
     execute("DELETE FROM messages WHERE thread_id = %s", (current_thread(),))
+
+
+def delete(thread_id: int) -> int:
+    """Drop a conversation and its name. Returns the thread left open — deleting the
+    open one falls back to the newest surviving thread."""
+    execute("DELETE FROM messages WHERE thread_id = %s", (thread_id,))
+    execute("DELETE FROM settings WHERE key = %s", (f"thread_title:{thread_id}",))
+    if current_thread() != thread_id:
+        return current_thread()
+    row = query("SELECT COALESCE(MAX(thread_id), 1) AS t FROM messages", one=True)
+    return set_thread(int(row["t"]))

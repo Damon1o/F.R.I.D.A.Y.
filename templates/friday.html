@@ -32,6 +32,17 @@ and its visibility module bails out when no .friday element exists. #}
       <div class="top-gradient" aria-hidden="true"></div>
       <div class="bottom-gradient" aria-hidden="true"></div>
     </div>
+    {# Cloned per row by friday.js so the Lucide SVGs come from the server, never glyphs. #}
+    <template id="thread-actions">
+      <div class="item-actions">
+        <button class="icon-btn" type="button" data-rename aria-label="Rename chat" title="Rename">
+          {{ icon('pencil', 14) }}
+        </button>
+        <button class="icon-btn danger" type="button" data-delete aria-label="Delete chat" title="Delete">
+          {{ icon('trash-2', 14) }}
+        </button>
+      </div>
+    </template>
   </aside>
 
   <div class="chat-body friday-body" id="friday-messages" aria-live="polite"></div>
