@@ -55,8 +55,8 @@
     new MutationObserver(function (muts) {
       muts.forEach(function (m) {
         if (m.type === 'attributes' && m.target.classList &&
-            m.target.classList.contains('assistant') &&
-            !m.target.classList.contains('is-pending')) {
+          m.target.classList.contains('assistant') &&
+          !m.target.classList.contains('is-pending')) {
           speak(m.target.textContent);
         }
       });

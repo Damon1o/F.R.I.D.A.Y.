@@ -10,7 +10,8 @@
   <div>
     <h1 class="display">Pending operations</h1>
     <p class="subtle">
-      {% if open_todos %}{{ open_todos | length }} open{% if done_todos %}, {{ done_todos | length }} cleared{% endif %}.
+      {% if open_todos %}{{ open_todos | length }} open{% if done_todos %}, {{ done_todos | length }} cleared{% endif
+      %}.
       {% else %}Nothing open. The queue is clear.{% endif %}
     </p>
   </div>

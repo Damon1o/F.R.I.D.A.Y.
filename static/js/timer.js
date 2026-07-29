@@ -34,7 +34,7 @@
         running: isRunning,
         ts: Date.now()
       }));
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function load() {
@@ -66,7 +66,7 @@
       osc.connect(gain).connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.6);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function start() {

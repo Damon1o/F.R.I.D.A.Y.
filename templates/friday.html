@@ -3,7 +3,7 @@
 {% block topbar %}Assistant{% endblock %}
 
 {# No side panel here: the conversation owns the window. friday.js binds by id,
-   and its visibility module bails out when no .friday element exists. #}
+and its visibility module bails out when no .friday element exists. #}
 {% block assistant %}{% endblock %}
 {% block shell_mod %}friday-hidden no-panel{% endblock %}
 {% block content_mod %}chat-view{% endblock %}
@@ -16,8 +16,8 @@
       <p class="subtle">Ask for anything across your events, tasks, notes and music.</p>
     </div>
     <span class="label-mono" id="friday-state"><i class="pulse" aria-hidden="true"></i>Online</span>
-    <button class="icon-btn" id="friday-history" type="button" aria-expanded="false"
-      aria-controls="chat-history" aria-label="Past conversations" title="Past conversations">
+    <button class="icon-btn" id="friday-history" type="button" aria-expanded="false" aria-controls="chat-history"
+      aria-label="Past conversations" title="Past conversations">
       {{ icon('history', 16) }}
     </button>
     <button class="icon-btn" id="friday-new" type="button" aria-label="New chat" title="New chat">

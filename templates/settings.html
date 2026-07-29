@@ -13,204 +13,207 @@
 
 <div class="settings-grid">
 
-<section class="card settings-group">
-  <h3>{{ icon('panel-left', 18) }} Navigation</h3>
+  <section class="card settings-group">
+    <h3>{{ icon('panel-left', 18) }} Navigation</h3>
 
-  <div class="setting-row">
-    <div>
-      <strong>Auto-collapse nav rail</strong>
-      <p class="subtle">When enabled, the left rail collapses to icons only. Hover to expand.</p>
+    <div class="setting-row">
+      <div>
+        <strong>Auto-collapse nav rail</strong>
+        <p class="subtle">When enabled, the left rail collapses to icons only. Hover to expand.</p>
+      </div>
+      <button class="btn-primary toggle-btn" type="button" id="nav-auto-collapse" data-pref="nav_collapsed"
+        aria-pressed="{{ 'true' if prefs.nav_collapsed == 'true' else 'false' }}">
+        <span class="toggle-on" style="display: {{ 'none' if prefs.nav_collapsed != 'true' else '' }}">On</span>
+        <span class="toggle-off" style="display: {{ 'none' if prefs.nav_collapsed == 'true' else '' }}">Off</span>
+      </button>
     </div>
-    <button class="btn-primary toggle-btn" type="button" id="nav-auto-collapse" data-pref="nav_collapsed"
-      aria-pressed="{{ 'true' if prefs.nav_collapsed == 'true' else 'false' }}">
-      <span class="toggle-on" style="display: {{ 'none' if prefs.nav_collapsed != 'true' else '' }}">On</span>
-      <span class="toggle-off" style="display: {{ 'none' if prefs.nav_collapsed == 'true' else '' }}">Off</span>
-    </button>
-  </div>
 
-  <div class="setting-row">
-    <div>
-      <strong>Keyboard shortcut: <kbd>Ctrl/Cmd</kbd>+<kbd>B</kbd></strong>
-      <p class="subtle">Toggle nav rail collapse/expand anytime.</p>
+    <div class="setting-row">
+      <div>
+        <strong>Keyboard shortcut: <kbd>Ctrl/Cmd</kbd>+<kbd>B</kbd></strong>
+        <p class="subtle">Toggle nav rail collapse/expand anytime.</p>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="card settings-group">
-  <h3>{{ icon('audio-lines', 18) }} Neural sync</h3>
+  <section class="card settings-group">
+    <h3>{{ icon('audio-lines', 18) }} Neural sync</h3>
 
-  <div class="setting-row">
-    <div>
-      <strong>Show assistant panel</strong>
-      <p class="subtle">When disabled, the right panel hides. Click the arrow button on the topbar to slide it out.</p>
+    <div class="setting-row">
+      <div>
+        <strong>Show assistant panel</strong>
+        <p class="subtle">When disabled, the right panel hides. Click the arrow button on the topbar to slide it out.
+        </p>
+      </div>
+      <button class="btn-primary toggle-btn" type="button" id="friday-visible" data-pref="friday_visible"
+        aria-pressed="{{ 'true' if prefs.friday_visible == 'true' else 'false' }}">
+        <span class="toggle-on" style="display: {{ 'none' if prefs.friday_visible != 'true' else '' }}">On</span>
+        <span class="toggle-off" style="display: {{ 'none' if prefs.friday_visible == 'true' else '' }}">Off</span>
+      </button>
     </div>
-    <button class="btn-primary toggle-btn" type="button" id="friday-visible" data-pref="friday_visible"
-      aria-pressed="{{ 'true' if prefs.friday_visible == 'true' else 'false' }}">
-      <span class="toggle-on" style="display: {{ 'none' if prefs.friday_visible != 'true' else '' }}">On</span>
-      <span class="toggle-off" style="display: {{ 'none' if prefs.friday_visible == 'true' else '' }}">Off</span>
-    </button>
-  </div>
 
-  <div class="setting-row">
-    <div>
-      <strong>Keyboard shortcut: <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></strong>
-      <p class="subtle">Toggle F.R.I.D.A.Y. panel visibility anytime.</p>
+    <div class="setting-row">
+      <div>
+        <strong>Keyboard shortcut: <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></strong>
+        <p class="subtle">Toggle F.R.I.D.A.Y. panel visibility anytime.</p>
+      </div>
     </div>
-  </div>
 
-  <div class="setting-row">
-    <div>
-      <strong>Wake word &ldquo;Hey Friday&rdquo;</strong>
-      <p class="subtle">Always listen for the wake word and start a voice command when it fires.
-        Runs entirely in the browser; needs microphone permission.</p>
+    <div class="setting-row">
+      <div>
+        <strong>Wake word &ldquo;Hey Friday&rdquo;</strong>
+        <p class="subtle">Always listen for the wake word and start a voice command when it fires.
+          Runs entirely in the browser; needs microphone permission.</p>
+      </div>
+      <button class="btn-primary toggle-btn" type="button" id="wake-word" data-pref="wake_word"
+        aria-pressed="{{ 'true' if prefs.wake_word == 'true' else 'false' }}">
+        <span class="toggle-on" style="display: {{ 'none' if prefs.wake_word != 'true' else '' }}">On</span>
+        <span class="toggle-off" style="display: {{ 'none' if prefs.wake_word == 'true' else '' }}">Off</span>
+      </button>
     </div>
-    <button class="btn-primary toggle-btn" type="button" id="wake-word" data-pref="wake_word"
-      aria-pressed="{{ 'true' if prefs.wake_word == 'true' else 'false' }}">
-      <span class="toggle-on" style="display: {{ 'none' if prefs.wake_word != 'true' else '' }}">On</span>
-      <span class="toggle-off" style="display: {{ 'none' if prefs.wake_word == 'true' else '' }}">Off</span>
-    </button>
-  </div>
 
-  <div class="setting-row">
-    <div>
-      <strong>Wake word sensitivity</strong>
-      <p class="subtle">Lower detects more easily but false-fires more. Default 0.5.
-        Live score while listening: <output id="wake-score">—</output></p>
+    <div class="setting-row">
+      <div>
+        <strong>Wake word sensitivity</strong>
+        <p class="subtle">Lower detects more easily but false-fires more. Default 0.5.
+          Live score while listening: <output id="wake-score">—</output></p>
+      </div>
+      <input type="range" id="wake-threshold" min="0.05" max="0.95" step="0.05" value="0.5">
     </div>
-    <input type="range" id="wake-threshold" min="0.05" max="0.95" step="0.05" value="0.5">
-  </div>
-</section>
+  </section>
 
-{# ---- Music / Spotify ---- #}
-<section class="card settings-group" id="music-settings">
-  <h3>{{ icon('music', 18) }} Music (Spotify)</h3>
+  {# ---- Music / Spotify ---- #}
+  <section class="card settings-group" id="music-settings">
+    <h3>{{ icon('music', 18) }} Music (Spotify)</h3>
 
-  <div class="setting-row">
-    <div>
-      <strong>Now Playing widget</strong>
-      <p class="subtle">Shows current track on Dashboard. Requires Spotify Premium for playback control.</p>
+    <div class="setting-row">
+      <div>
+        <strong>Now Playing widget</strong>
+        <p class="subtle">Shows current track on Dashboard. Requires Spotify Premium for playback control.</p>
+      </div>
+      <span class="pill" id="music-status">Not connected</span>
     </div>
-    <span class="pill" id="music-status">Not connected</span>
-  </div>
 
-  <div class="setting-row" id="music-disconnected" style="display:none;">
-    <div>
-      <strong>Connect Spotify</strong>
-      <p class="subtle">Authorize F.R.I.D.A.Y. to read your playback state and control music.</p>
+    <div class="setting-row" id="music-disconnected" style="display:none;">
+      <div>
+        <strong>Connect Spotify</strong>
+        <p class="subtle">Authorize F.R.I.D.A.Y. to read your playback state and control music.</p>
+      </div>
+      <a class="btn-primary" href="/api/music/spotify/login" id="spotify-connect-btn">Connect Spotify</a>
     </div>
-    <a class="btn-primary" href="/api/music/spotify/login" id="spotify-connect-btn">Connect Spotify</a>
-  </div>
 
-  <div class="setting-row" id="music-connected" style="display:none;">
-    <div>
-      <strong>Connected</strong>
-      <p class="subtle">Spotify is linked. The Dashboard widget will show your current track.</p>
+    <div class="setting-row" id="music-connected" style="display:none;">
+      <div>
+        <strong>Connected</strong>
+        <p class="subtle">Spotify is linked. The Dashboard widget will show your current track.</p>
+      </div>
+      <button class="btn-primary" id="spotify-disconnect-btn" type="button">Disconnect</button>
     </div>
-    <button class="btn-primary" id="spotify-disconnect-btn" type="button">Disconnect</button>
-  </div>
-</section>
+  </section>
 
-<section class="card settings-group">
-  <h3>{{ icon('circle-user', 18) }} Profile</h3>
-  <p class="subtle">F.R.I.D.A.Y. uses these when talking to you and when resolving dates like &ldquo;tomorrow&rdquo;.</p>
+  <section class="card settings-group">
+    <h3>{{ icon('circle-user', 18) }} Profile</h3>
+    <p class="subtle">F.R.I.D.A.Y. uses these when talking to you and when resolving dates like &ldquo;tomorrow&rdquo;.
+    </p>
 
-  <label class="field">What to call me
-    <input id="pref-user-name" data-pref="user_name" placeholder="Boss" autocomplete="off">
-  </label>
-  <label class="field">Birthday
-    <input id="pref-birthday" data-pref="birthday" type="date">
-  </label>
-  <label class="field">Timezone
-    <select id="pref-timezone" data-pref="timezone"></select>
-  </label>
+    <label class="field">What to call me
+      <input id="pref-user-name" data-pref="user_name" placeholder="Boss" autocomplete="off">
+    </label>
+    <label class="field">Birthday
+      <input id="pref-birthday" data-pref="birthday" type="date">
+    </label>
+    <label class="field">Timezone
+      <select id="pref-timezone" data-pref="timezone"></select>
+    </label>
 
-  <div class="setting-row">
-    <p class="subtle" id="profile-status">&nbsp;</p>
-    <button class="btn-primary" type="button" id="profile-save">Save</button>
-  </div>
-</section>
-
-{# ---- Reminders ---- #}
-<section class="card settings-group">
-  <h3>{{ icon('bell', 18) }} Reminders</h3>
-  <p class="subtle">One text message per event and per task deadline, sent the day before.
-    Runs once a day; nothing is sent if the day ahead is empty.</p>
-
-  <div class="setting-row">
-    <div>
-      <strong>Day-before text reminders</strong>
-      <p class="subtle">Sends a separate message for each calendar event and each task due tomorrow.</p>
+    <div class="setting-row">
+      <p class="subtle" id="profile-status">&nbsp;</p>
+      <button class="btn-primary" type="button" id="profile-save">Save</button>
     </div>
-    <button class="btn-primary toggle-btn" type="button" id="reminders-sms" data-pref="reminders_sms"
-      aria-pressed="{{ 'true' if prefs.reminders_sms == 'true' else 'false' }}">
-      <span class="toggle-on" style="display: {{ 'none' if prefs.reminders_sms != 'true' else '' }}">On</span>
-      <span class="toggle-off" style="display: {{ 'none' if prefs.reminders_sms == 'true' else '' }}">Off</span>
-    </button>
-  </div>
+  </section>
 
-  <label class="field">Send to (E.164, e.g. +12125550147)
-    <input id="pref-reminder-phone" data-pref="reminder_phone" type="tel"
-           placeholder="+12125550147" autocomplete="off" value="{{ prefs.reminder_phone }}">
-  </label>
-  <p class="subtle" id="reminder-phone-status">&nbsp;</p>
-</section>
+  {# ---- Reminders ---- #}
+  <section class="card settings-group">
+    <h3>{{ icon('bell', 18) }} Reminders</h3>
+    <p class="subtle">One text message per event and per task deadline, sent the day before.
+      Runs once a day; nothing is sent if the day ahead is empty.</p>
 
-{# ---- Location & Units ---- #}
-<section class="card settings-group">
-  <h3>{{ icon('map-pin', 18) }} Location &amp; units</h3>
-  <p class="subtle">Used for weather on the Dashboard. Click to detect your location automatically.</p>
-
-  <div class="setting-row">
-    <div>
-      <strong>Detected location</strong>
-      <p class="subtle" id="location-status">Not set</p>
+    <div class="setting-row">
+      <div>
+        <strong>Day-before text reminders</strong>
+        <p class="subtle">Sends a separate message for each calendar event and each task due tomorrow.</p>
+      </div>
+      <button class="btn-primary toggle-btn" type="button" id="reminders-sms" data-pref="reminders_sms"
+        aria-pressed="{{ 'true' if prefs.reminders_sms == 'true' else 'false' }}">
+        <span class="toggle-on" style="display: {{ 'none' if prefs.reminders_sms != 'true' else '' }}">On</span>
+        <span class="toggle-off" style="display: {{ 'none' if prefs.reminders_sms == 'true' else '' }}">Off</span>
+      </button>
     </div>
-    <button class="btn-primary" type="button" id="detect-location">{{ icon('crosshair', 18) }} Detect Location</button>
-  </div>
 
-  <div class="setting-row" id="location-details" style="display:none;">
-    <div style="flex:1;">
-      <strong id="location-name">—</strong>
-      <p class="subtle" id="location-coords">—</p>
-    </div>
-    <button class="btn-primary" type="button" id="clear-location">Clear</button>
-  </div>
+    <label class="field">Send to (E.164, e.g. +12125550147)
+      <input id="pref-reminder-phone" data-pref="reminder_phone" type="tel" placeholder="+12125550147"
+        autocomplete="off" value="{{ prefs.reminder_phone }}">
+    </label>
+    <p class="subtle" id="reminder-phone-status">&nbsp;</p>
+  </section>
 
-  <div class="setting-row">
-    <div>
-      <strong>Temperature units</strong>
-      <p class="subtle">Choose Celsius or Fahrenheit for the weather widget.</p>
-    </div>
-    <button class="btn-primary toggle-btn" type="button" id="units-toggle" data-pref="units"
-      aria-pressed="{{ 'true' if prefs.units == 'imperial' else 'false' }}">
-      <span class="toggle-on" style="display: {{ 'none' if prefs.units != 'imperial' else '' }}">°F</span>
-      <span class="toggle-off" style="display: {{ 'none' if prefs.units == 'imperial' else '' }}">°C</span>
-    </button>
-  </div>
+  {# ---- Location & Units ---- #}
+  <section class="card settings-group">
+    <h3>{{ icon('map-pin', 18) }} Location &amp; units</h3>
+    <p class="subtle">Used for weather on the Dashboard. Click to detect your location automatically.</p>
 
-  <div class="setting-row">
-    <div>
-      <strong>24-hour clock</strong>
-      <p class="subtle">Off shows 12-hour time with AM/PM.</p>
+    <div class="setting-row">
+      <div>
+        <strong>Detected location</strong>
+        <p class="subtle" id="location-status">Not set</p>
+      </div>
+      <button class="btn-primary" type="button" id="detect-location">{{ icon('crosshair', 18) }} Detect
+        Location</button>
     </div>
-    <button class="btn-primary toggle-btn" type="button" id="clock-24h" data-pref="clock_24h"
-      aria-pressed="{{ 'true' if prefs.clock_24h == 'true' else 'false' }}">
-      <span class="toggle-on" style="display: {{ 'none' if prefs.clock_24h != 'true' else '' }}">On</span>
-      <span class="toggle-off" style="display: {{ 'none' if prefs.clock_24h == 'true' else '' }}">Off</span>
-    </button>
-  </div>
-</section>
 
-<section class="card settings-group">
-  <h3>{{ icon('shield', 18) }} About</h3>
-  <div class="setting-row">
-    <div><strong>F.R.I.D.A.Y.</strong>
-      <p class="subtle">Calendar, tasks, notes, music, and the voice assistant. Single user, self-hosted assets,
-        no external network calls from the interface.</p>
+    <div class="setting-row" id="location-details" style="display:none;">
+      <div style="flex:1;">
+        <strong id="location-name">—</strong>
+        <p class="subtle" id="location-coords">—</p>
+      </div>
+      <button class="btn-primary" type="button" id="clear-location">Clear</button>
     </div>
-    <span class="pill">v0.1</span>
-  </div>
-</section>
+
+    <div class="setting-row">
+      <div>
+        <strong>Temperature units</strong>
+        <p class="subtle">Choose Celsius or Fahrenheit for the weather widget.</p>
+      </div>
+      <button class="btn-primary toggle-btn" type="button" id="units-toggle" data-pref="units"
+        aria-pressed="{{ 'true' if prefs.units == 'imperial' else 'false' }}">
+        <span class="toggle-on" style="display: {{ 'none' if prefs.units != 'imperial' else '' }}">°F</span>
+        <span class="toggle-off" style="display: {{ 'none' if prefs.units == 'imperial' else '' }}">°C</span>
+      </button>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <strong>24-hour clock</strong>
+        <p class="subtle">Off shows 12-hour time with AM/PM.</p>
+      </div>
+      <button class="btn-primary toggle-btn" type="button" id="clock-24h" data-pref="clock_24h"
+        aria-pressed="{{ 'true' if prefs.clock_24h == 'true' else 'false' }}">
+        <span class="toggle-on" style="display: {{ 'none' if prefs.clock_24h != 'true' else '' }}">On</span>
+        <span class="toggle-off" style="display: {{ 'none' if prefs.clock_24h == 'true' else '' }}">Off</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="card settings-group">
+    <h3>{{ icon('shield', 18) }} About</h3>
+    <div class="setting-row">
+      <div><strong>F.R.I.D.A.Y.</strong>
+        <p class="subtle">Calendar, tasks, notes, music, and the voice assistant. Single user, self-hosted assets,
+          no external network calls from the interface.</p>
+      </div>
+      <span class="pill">v0.1</span>
+    </div>
+  </section>
 
 </div>{# /settings-grid #}
 {% endblock %}
@@ -324,7 +327,7 @@
   fetch('/api/settings/ui').then(r => r.json()).then(data => {
     for (const el of profileFields) el.value = data[el.dataset.pref] || '';
     if (!tzSelect.value) tzSelect.value = browserTz;
-  }).catch(() => {});
+  }).catch(() => { });
 
   document.getElementById('profile-save').addEventListener('click', async () => {
     const body = Object.fromEntries(profileFields.map(el => [el.dataset.pref, el.value]));

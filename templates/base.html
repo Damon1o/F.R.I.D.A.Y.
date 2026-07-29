@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   {# viewport-fit=cover: the app draws under the notch/home indicator; CSS pays it
-     back with env(safe-area-inset-*) padding. #}
+  back with env(safe-area-inset-*) padding. #}
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}F.R.I.D.A.Y.{% endblock %}</title>
   {# Home-screen bookmark on iOS Safari: standalone chrome, translucent status bar. #}
@@ -43,18 +43,18 @@
 
       {% set page = request.endpoint %}
       {% set nav_items = [
-        ('dashboard.index',        'layout-dashboard', 'Dashboard'),
-        ('calendar.calendar_page', 'calendar',         'Calendar'),
-        ('todos.todos_page',       'circle-check-big', 'Tasks'),
-        ('notes.notes_page',       'file-text',        'Notes'),
-        ('friday.friday_page',     'message-square',   'Assistant'),
-        ('music.music_page',       'music',            'Music'),
+      ('dashboard.index', 'layout-dashboard', 'Dashboard'),
+      ('calendar.calendar_page', 'calendar', 'Calendar'),
+      ('todos.todos_page', 'circle-check-big', 'Tasks'),
+      ('notes.notes_page', 'file-text', 'Notes'),
+      ('friday.friday_page', 'message-square', 'Assistant'),
+      ('music.music_page', 'music', 'Music'),
       ] %}
 
       <nav class="nav" aria-label="Sections">
         {% for endpoint, ico, label in nav_items %}
-        <a class="nav-link {{ 'is-active' if page == endpoint }}" href="{{ url_for(endpoint) }}"
-          {{ 'aria-current=page' if page == endpoint }}>
+        <a class="nav-link {{ 'is-active' if page == endpoint }}" href="{{ url_for(endpoint) }}" {{ 'aria-current=page'
+          if page==endpoint }}>
           {{ icon(ico, 20) }}<span>{{ label }}</span>
         </a>
         {% endfor %}
@@ -62,8 +62,7 @@
 
       <nav class="nav nav-foot" aria-label="System">
         <a class="nav-link {{ 'is-active' if page == 'settings.settings_page' }}"
-          href="{{ url_for('settings.settings_page') }}"
-          {{ 'aria-current=page' if page == 'settings.settings_page' }}>
+          href="{{ url_for('settings.settings_page') }}" {{ 'aria-current=page' if page=='settings.settings_page' }}>
           {{ icon('settings', 20) }}<span>Settings</span>
         </a>
       </nav>
@@ -99,7 +98,8 @@
           </a>
           <button class="icon-btn" id="friday-toggle" type="button"
             aria-label="{{ 'Show' if friday_visible == 'false' else 'Hide' }} F.R.I.D.A.Y. panel"
-            aria-expanded="{{ 'false' if friday_visible == 'false' else 'true' }}">{{ icon('message-square', 18) }}</button>
+            aria-expanded="{{ 'false' if friday_visible == 'false' else 'true' }}">{{ icon('message-square', 18)
+            }}</button>
         </div>
       </header>
 
