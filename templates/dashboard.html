@@ -11,29 +11,27 @@
 {# ---- Live strip: clock, date, weather ---- #}
 <section class="widget-bar" aria-label="Live status">
   <div class="widget" data-widget="clock" aria-live="polite">
-    <span class="widget-icon">{{ icon('clock', 18) }}</span>
-    <div class="widget-content">
-      <div class="widget-value" data-clock>--:--:--</div>
-      <div class="widget-label">Local time</div>
+    <div class="widget-head">
+      <span class="widget-icon">{{ icon('clock', 14) }}</span>
+      <span class="widget-label">Local time</span>
     </div>
+    <div class="widget-value" data-clock>--:--:--</div>
   </div>
   <div class="widget" data-widget="date">
-    <span class="widget-icon">{{ icon('calendar', 18) }}</span>
-    <div class="widget-content">
-      <div class="widget-value" data-date>{{ today.strftime('%A, %B %d, %Y') }}</div>
-      <div class="widget-label">Today</div>
+    <div class="widget-head">
+      <span class="widget-icon">{{ icon('calendar', 14) }}</span>
+      <span class="widget-label">Today</span>
     </div>
+    <div class="widget-value" data-date>{{ today.strftime('%A, %B %d, %Y') }}</div>
   </div>
   <div class="widget" data-widget="weather" id="weather-widget">
-    <span class="widget-icon">{{ icon('cloud', 18) }}</span>
-    <div class="widget-content">
-      <div class="widget-value" data-weather-temp>--°</div>
-      <div class="widget-row">
-        <span class="widget-label" data-weather-cond>Loading…</span>
-        <span class="widget-label" data-weather-loc></span>
-      </div>
-      <div class="widget-row" data-weather-range style="display:none;"></div>
+    <div class="widget-head">
+      <span class="widget-icon">{{ icon('cloud', 14) }}</span>
+      <span class="widget-label" data-weather-cond>Loading…</span>
+      <span class="widget-label widget-sep" data-weather-loc></span>
     </div>
+    <div class="widget-value" data-weather-temp>--°</div>
+    <div class="widget-meta" data-weather-range style="display:none;"></div>
   </div>
 </section>
 

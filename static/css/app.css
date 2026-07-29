@@ -836,23 +836,35 @@ input[type='range']::-moz-range-thumb {
   gap: var(--gap);
 }
 
+/* Label sits above the value so all widgets align on the same two baselines,
+   regardless of any extra meta line. */
 .widget {
   display: flex;
-  align-items: center;
-  gap: var(--s-3);
+  flex-direction: column;
+  gap: var(--s-2);
   padding: var(--s-4) var(--s-5);
   border-radius: var(--radius-lg);
 }
 
-.widget-icon { color: var(--on-surface-faint); }
-.widget-content { min-width: 0; }
+.widget-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.widget-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--on-surface-faint);
+}
 
 .widget-value {
   font-family: var(--font-display);
-  font-size: 1.375rem;
+  font-size: 1.5rem;
   font-weight: 500;
   letter-spacing: var(--tracking-tight);
-  line-height: 1.2;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
@@ -865,9 +877,31 @@ input[type='range']::-moz-range-thumb {
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--on-surface-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.widget-row { display: flex; gap: var(--s-3); flex-wrap: wrap; }
+.widget-sep::before {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 0.7em;
+  margin-right: var(--s-2);
+  vertical-align: -0.05em;
+  background: var(--hairline-strong, var(--hairline));
+}
+
+.widget-sep:empty { display: none; }
+
+/* Pushed to the bottom so the extra weather line never shifts the value row. */
+.widget-meta {
+  margin-top: auto;
+  padding-top: var(--s-2);
+  font-size: var(--text-body-sm);
+  color: var(--on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
 
 .week-split {
   display: grid;
