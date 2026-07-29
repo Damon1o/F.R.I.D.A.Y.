@@ -1558,7 +1558,9 @@ body {
 /* Under viewport-fit=cover the shell paints edge to edge — pad the chrome back
    out of the notch, the home indicator and the curved corners. */
 .topbar { padding-top: env(safe-area-inset-top); }
-.rail { padding-left: env(safe-area-inset-left); }
+/* max(), not the bare inset — a longhand here would otherwise wipe out the
+   rail's own padding-left from the shorthand above (insets are 0 on desktop). */
+.rail { padding-left: max(var(--s-3), env(safe-area-inset-left)); }
 .content { padding-bottom: calc(var(--s-12) + env(safe-area-inset-bottom)); }
 .friday { padding-bottom: env(safe-area-inset-bottom); }
 
