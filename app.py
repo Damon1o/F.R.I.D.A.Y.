@@ -63,6 +63,8 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         app.config.update(config_overrides)
 
     db.init_app(app)
+    with app.app_context():
+        db.init_db()
     app.jinja_env.globals["icon"] = render_icon
     app.jinja_env.globals["logo"] = render_logo
 
