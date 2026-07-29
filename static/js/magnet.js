@@ -9,7 +9,12 @@
   if (matchMedia('(pointer: coarse)').matches ||
     matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  var cards = [].slice.call(document.querySelectorAll(SELECTOR));
+  // Chrome stays put: the nav rail, the topbar and the dashboard status strip
+  // are navigation/reference surfaces — drifting text is harder to read and aim at.
+  var EXCLUDE = '.rail, .topbar, .widget-bar';
+
+  var cards = [].slice.call(document.querySelectorAll(SELECTOR))
+    .filter(function (c) { return !c.closest(EXCLUDE); });
   if (!cards.length) return;
   cards.forEach(function (c) { c.classList.add('is-magnet'); });
 
