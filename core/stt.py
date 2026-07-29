@@ -3,12 +3,25 @@ import subprocess
 from pathlib import Path
 
 VENDOR = Path(__file__).resolve().parent.parent / "vendor" / "voice"
-WHISPER_BIN = VENDOR / "whisper-cli"
+
+
+def _bin(name: str) -> Path:
+    """Windows dev builds are `<name>.exe`; the Vercel Linux build has no suffix."""
+    exe = VENDOR / f"{name}.exe"
+    return exe if exe.exists() else VENDOR / name
+
+
+WHISPER_BIN = _bin("whisper-cli")
 WHISPER_MODEL = VENDOR / "ggml-tiny.en.bin"
 
 
 class STTError(RuntimeError):
     """whisper.cpp failed."""
+
+
+def available() -> bool:
+    """False when the gitignored binary/model are not in vendor/voice (see its README)."""
+    return WHISPER_BIN.exists() and WHISPER_MODEL.exists()
 
 
 def transcribe(wav_path: str) -> str:

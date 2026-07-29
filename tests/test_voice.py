@@ -138,3 +138,94 @@ def test_voice_stt_error_falls_back_to_spoken_reply(client, monkeypatch):
     assert res.status_code == 200               # STT failure ⇒ spoken 200, not 500
     assert called["agent"] is False             # agent skipped on STT error
     assert b"didn't catch that" in res.data
+
+
+# ---- /api/voice/stt + /api/voice/tts (browser offline path, no bearer token) ----
+
+
+def _available(monkeypatch, stt_ok=True, tts_ok=True):
+    monkeypatch.setattr(voice_routes.stt, "available", lambda: stt_ok)
+    monkeypatch.setattr(voice_routes.tts, "available", lambda: tts_ok)
+
+
+def test_stt_returns_transcript(client, monkeypatch):
+    _available(monkeypatch)
+    monkeypatch.setattr(voice_routes.stt, "transcribe", lambda p: "add buy milk")
+    res = client.post("/api/voice/stt", data=_wav_upload(), content_type="multipart/form-data")
+    assert res.status_code == 200
+    assert res.get_json()["transcript"] == "add buy milk"
+
+
+def test_stt_error_returns_empty_transcript(client, monkeypatch):
+    _available(monkeypatch)
+
+    def raise_stt(p):
+        raise voice_routes.stt.STTError("whisper exited non-zero")
+
+    monkeypatch.setattr(voice_routes.stt, "transcribe", raise_stt)
+    res = client.post("/api/voice/stt", data=_wav_upload(), content_type="multipart/form-data")
+    assert res.status_code == 200                # unrecognizable audio is not an error
+    assert res.get_json()["transcript"] == ""
+
+
+def test_stt_rejects_missing_audio(client, monkeypatch):
+    _available(monkeypatch)
+    res = client.post("/api/voice/stt", data={}, content_type="multipart/form-data")
+    assert res.status_code == 400
+
+
+def test_stt_rejects_oversize_audio(client, monkeypatch):
+    _available(monkeypatch)
+    res = client.post("/api/voice/stt", data=_wav_upload(b"x" * (2 * 1024 * 1024 + 1)),
+                      content_type="multipart/form-data")
+    assert res.status_code == 413
+
+
+def test_stt_503_when_binary_missing(client, monkeypatch):
+    _available(monkeypatch, stt_ok=False)
+    res = client.post("/api/voice/stt", data=_wav_upload(), content_type="multipart/form-data")
+    assert res.status_code == 503                # client falls back to Web Speech on 503
+
+
+def test_tts_returns_wav(client, monkeypatch):
+    _available(monkeypatch)
+
+    def fake_synth(text, out_path):
+        with open(out_path, "wb") as f:
+            f.write(b"RIFFyessirwav")
+        return out_path
+
+    monkeypatch.setattr(voice_routes.tts, "synth", fake_synth)
+    res = client.post("/api/voice/tts", json={"text": "Yes sir."})
+    assert res.status_code == 200
+    assert res.mimetype == "audio/wav"
+    assert res.data == b"RIFFyessirwav"
+
+
+def test_tts_rejects_empty_text(client, monkeypatch):
+    _available(monkeypatch)
+    res = client.post("/api/voice/tts", json={"text": "   "})
+    assert res.status_code == 400
+
+
+def test_tts_503_when_binary_missing(client, monkeypatch):
+    _available(monkeypatch, tts_ok=False)
+    res = client.post("/api/voice/tts", json={"text": "Yes sir."})
+    assert res.status_code == 503
+
+
+def test_tts_503_on_piper_failure(client, monkeypatch):
+    _available(monkeypatch)
+
+    def raise_tts(text, out_path):
+        raise voice_routes.tts.TTSError("piper exited non-zero")
+
+    monkeypatch.setattr(voice_routes.tts, "synth", raise_tts)
+    res = client.post("/api/voice/tts", json={"text": "Yes sir."})
+    assert res.status_code == 503
+
+
+def test_voice_offline_pref_round_trips(client):
+    assert client.get("/api/settings/ui").get_json()["voice_offline"] == "false"
+    assert client.post("/api/settings/ui", json={"voice_offline": True}).get_json()["voice_offline"] == "true"
+    assert client.get("/api/settings/ui").get_json()["voice_offline"] == "true"

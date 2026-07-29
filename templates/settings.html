@@ -80,6 +80,20 @@
       </div>
       <input type="range" id="wake-threshold" min="0.05" max="0.95" step="0.05" value="0.5">
     </div>
+
+    <div class="setting-row">
+      <div>
+        <strong>Offline voice</strong>
+        <p class="subtle">Transcribe and speak on this machine instead of through the browser&rsquo;s
+          cloud speech service &mdash; no audio leaves the origin. Needs the whisper.cpp and piper
+          binaries in <code>vendor/voice/</code>; local development only.</p>
+      </div>
+      <button class="btn-primary toggle-btn" type="button" id="voice-offline" data-pref="voice_offline"
+        aria-pressed="{{ 'true' if prefs.voice_offline == 'true' else 'false' }}">
+        <span class="toggle-on" style="display: {{ 'none' if prefs.voice_offline != 'true' else '' }}">On</span>
+        <span class="toggle-off" style="display: {{ 'none' if prefs.voice_offline == 'true' else '' }}">Off</span>
+      </button>
+    </div>
   </section>
 
   {# ---- Music / Spotify ---- #}
@@ -271,6 +285,10 @@
 
   initToggle('wake-word', 'wake_word', false, (on) => {
     window.dispatchEvent(new CustomEvent('wake-pref-changed', { detail: { enabled: on } }));
+  });
+
+  initToggle('voice-offline', 'voice_offline', false, (on) => {
+    window.dispatchEvent(new CustomEvent('voice-mode-changed', { detail: { offline: on } }));
   });
 
   initToggle('reminders-sms', 'reminders_sms', false);

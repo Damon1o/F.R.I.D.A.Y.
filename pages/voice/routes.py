@@ -78,3 +78,64 @@ def voice():
                 os.remove(p)
             except OSError:
                 pass
+
+
+# ---- Browser-side offline voice (same-origin, no bearer token) ----
+# The browser cannot hold the VOICE_TOKEN secret, and the rest of the app is unauthenticated
+# anyway. These two split /api/voice's pipeline so the existing chat path stays in the middle:
+# the page transcribes here, submits the normal chat form, then speaks the reply here.
+# 503 (not 500) when the vendor binaries are missing, so the client can fall back to Web Speech.
+
+
+@voice_bp.route("/api/voice/stt", methods=["POST"])
+def voice_stt():
+    if not stt.available():
+        return jsonify({"error": "stt unavailable"}), 503
+
+    upload = request.files.get("audio")
+    audio = upload.read() if upload is not None else b""
+    if not audio:
+        return jsonify({"error": "no audio"}), 400
+    if len(audio) > MAX_AUDIO_BYTES:
+        return jsonify({"error": "audio too large"}), 413
+
+    fd, path = tempfile.mkstemp(suffix=".wav")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(audio)
+        try:
+            transcript = stt.transcribe(path)
+        except stt.STTError:
+            transcript = ""            # unrecognizable audio ⇒ empty, same as /api/voice
+        return jsonify({"transcript": transcript})
+    finally:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+@voice_bp.route("/api/voice/tts", methods=["POST"])
+def voice_tts():
+    if not tts.available():
+        return jsonify({"error": "tts unavailable"}), 503
+
+    text = (request.get_json(silent=True) or {}).get("text", "")
+    text = str(text).strip()
+    if not text:
+        return jsonify({"error": "no text"}), 400
+
+    fd, path = tempfile.mkstemp(suffix=".wav")
+    os.close(fd)
+    try:
+        try:
+            tts.synth(text, path)
+        except tts.TTSError:
+            return jsonify({"error": "tts failed"}), 503
+        with open(path, "rb") as f:
+            return Response(f.read(), mimetype="audio/wav")
+    finally:
+        try:
+            os.remove(path)
+        except OSError:
+            pass

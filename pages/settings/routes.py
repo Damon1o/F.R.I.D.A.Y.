@@ -12,6 +12,7 @@ BOOL_PREFS = {
     "nav_collapsed": "false",
     "friday_visible": "false",
     "wake_word": "false",
+    "voice_offline": "false",
     "reminders_sms": "false",
     "clock_24h": "true",
 }

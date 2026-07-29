@@ -3,12 +3,25 @@ import subprocess
 from pathlib import Path
 
 VENDOR = Path(__file__).resolve().parent.parent / "vendor" / "voice"
-PIPER_BIN = VENDOR / "piper"
+
+
+def _bin(name: str) -> Path:
+    """Windows dev builds are `<name>.exe`; the Vercel Linux build has no suffix."""
+    exe = VENDOR / f"{name}.exe"
+    return exe if exe.exists() else VENDOR / name
+
+
+PIPER_BIN = _bin("piper")
 PIPER_VOICE = VENDOR / "en_GB-alan-medium.onnx"
 
 
 class TTSError(RuntimeError):
     """piper failed."""
+
+
+def available() -> bool:
+    """False when the gitignored binary/voice are not in vendor/voice (see its README)."""
+    return PIPER_BIN.exists() and PIPER_VOICE.exists()
 
 
 def synth(text: str, out_path: str) -> str:

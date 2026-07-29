@@ -113,11 +113,14 @@
         var now = Date.now();
         // Don't retrigger mid-utterance, and don't wake on F.R.I.D.A.Y.'s own reply.
         if (now - lastFire < COOLDOWN_MS) return;
+        if (window.fridaySpeaking) return;   // offline TTS: speechSynthesis.speaking stays false
         if (window.speechSynthesis && window.speechSynthesis.speaking) return;
         if (mic.classList.contains('is-live')) return;
         lastFire = now;
         featBuf = [];   // clear so the same utterance can't score twice
-        mic.click();
+        // voice-web.js answers "Yes sir" then opens the mic itself. It bails early on
+        // browsers with no SpeechRecognition, so fall back to the plain mic click.
+        window.fridayAck ? window.fridayAck() : mic.click();
       }
 
       // A ScriptProcessorNode is only pulled by the graph once it reaches a destination,
