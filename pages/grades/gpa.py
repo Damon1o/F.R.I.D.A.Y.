@@ -17,15 +17,20 @@ numeric 0-100 averages. A course counts only if Campus itself marks it
 `includedInTermGPA`, which is how Phys. Ed. and lunch drop out; the catalog
 publishes no exclusion list of its own.
 
-The catalog publishes no class-rank formula and no credit weighting, which is why
-two credit models are reported below. It does publish credits per course as
-"(Year Course, 1 Unit)" / "(Semester Course, .5 Unit)", matching the marking-period
-inference the sync makes.
+The catalog does not publish the combining formula, but an official Mepham
+transcript pins it exactly. Every course carries a Weight, and:
 
-Two credit models are reported because the portal does not publish credit hours.
-Equal-weight treats every course the same; credit-weighted scales a semester
-course to the half-year it actually ran. Compare both against the official number
-on a report card — whichever matches is the district's model.
+    unweighted = SUM(mark * weight) / SUM(weight)
+    weighted   = SUM((mark + bonus) * weight) / SUM(weight)
+
+Verified against the transcript generated 2026-07-29: SUM(weight) 9.5 over grades
+8 and 9, SUM(mark * weight) 928 -> 97.6842, plus 14 points of bonus -> 99.1579.
+Both reproduce the printed figures to four decimals.
+
+Weight is not credit. Phys. Ed. prints 0.500 credit against Weight 0.0000: it
+earns credit and no GPA. Campus publishes neither number, so weight is inferred
+from the share of marking periods a course ran and can be pinned per course — the
+transcript prints STEAM Comp Sci at 0.25 where that inference says 0.5.
 """
 from core.db import execute, query
 from pages.calendar.models import ValidationError
@@ -65,10 +70,22 @@ def detect_level(name: str) -> str:
     return "regular"
 
 
-def level_overrides() -> dict[str, str]:
-    """User-pinned levels, keyed by course name. Beat detection and survive sync."""
-    return {r["course_name"]: r["level"] for r in
-            query("SELECT course_name, level FROM gpa_levels")}
+def overrides() -> dict[str, dict]:
+    """User pins, keyed by course name. Beat detection and survive a resync."""
+    return {r["course_name"]: {"level": r["level"], "weight": r["weight"]}
+            for r in query("SELECT course_name, level, weight FROM gpa_levels")}
+
+
+def _pin(course_name: str, column: str, value) -> None:
+    execute(
+        f"INSERT INTO gpa_levels (course_name, {column}) VALUES (%s, %s) "
+        f"ON CONFLICT(course_name) DO UPDATE SET {column}=excluded.{column}, "
+        "updated_at=to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')",
+        (course_name, value),
+    )
+    # A row pinning nothing is just clutter.
+    execute("DELETE FROM gpa_levels WHERE course_name = %s "
+            "AND level IS NULL AND weight IS NULL", (course_name,))
 
 
 def set_level(course_name: str, level: str) -> str | None:
@@ -83,17 +100,34 @@ def set_level(course_name: str, level: str) -> str | None:
         raise ValidationError("course_name is required")
     level = (level or "").strip().lower()
     if level in ("auto", ""):
-        execute("DELETE FROM gpa_levels WHERE course_name = %s", (course_name,))
+        _pin(course_name, "level", None)
         return None
     if level not in BONUS:
         raise ValidationError(f"level must be auto or one of {', '.join(LEVELS)}")
-    execute(
-        "INSERT INTO gpa_levels (course_name, level) VALUES (%s, %s) "
-        "ON CONFLICT(course_name) DO UPDATE SET level=excluded.level, "
-        "updated_at=to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')",
-        (course_name, level),
-    )
+    _pin(course_name, "level", level)
     return level
+
+
+def set_weight(course_name: str, weight) -> float | None:
+    """Pin a course's GPA weight, or clear it with '' / 'auto'.
+
+    The transcript's Weight column is authoritative and Campus never sends it.
+    Zero is a legal pin: that is exactly how Phys. Ed. is carried.
+    """
+    course_name = (course_name or "").strip()
+    if not course_name:
+        raise ValidationError("course_name is required")
+    if weight in (None, "", "auto"):
+        _pin(course_name, "weight", None)
+        return None
+    try:
+        weight = float(weight)
+    except (TypeError, ValueError):
+        raise ValidationError("weight must be a number")
+    if weight < 0:
+        raise ValidationError("weight cannot be negative")
+    _pin(course_name, "weight", weight)
+    return weight
 
 
 def _weighted(pct: float, level: str) -> float:
@@ -118,78 +152,78 @@ def course_rows() -> list[dict]:
         "SELECT id, year, name, final_pct, level, credits, 'manual' AS source "
         "FROM gpa_courses ORDER BY year, name"
     )
-    pinned = level_overrides()
+    pinned = overrides()
     rows = []
     for r in synced:
+        pin = pinned.get(r["name"], {})
         detected = r["level"] or detect_level(r["name"])
+        inferred = r["credits"] if r["credits"] is not None else 1.0
         rows.append({"id": None, "year": "current", "name": r["name"],
                      "final_pct": r["final_pct"],
-                     "level": pinned.get(r["name"], detected),
+                     "level": pin.get("level") or detected,
                      "detected": detected,
-                     "pinned": r["name"] in pinned,
-                     "credits": r["credits"] or 1.0, "source": "synced"})
+                     "level_pinned": pin.get("level") is not None,
+                     "weight": pin["weight"] if pin.get("weight") is not None else inferred,
+                     "inferred_weight": inferred,
+                     "weight_pinned": pin.get("weight") is not None,
+                     "source": "synced"})
     for r in manual:
         rows.append({"id": r["id"], "year": r["year"], "name": r["name"],
                      "final_pct": r["final_pct"], "level": r["level"],
-                     "detected": r["level"], "pinned": False,
-                     "credits": r["credits"], "source": "manual"})
+                     "detected": r["level"], "level_pinned": False,
+                     "weight": r["credits"], "inferred_weight": r["credits"],
+                     "weight_pinned": False, "source": "manual"})
     return rows
 
 
+def _totals(rows: list[dict]) -> dict:
+    """The district formula: SUM(mark * weight) / SUM(weight), bonus inside."""
+    return {
+        "weight": round(sum(r["weight"] for r in rows), 4),
+        "unweighted": _mean([(r["final_pct"], r["weight"]) for r in rows]),
+        "weighted": _mean([(r["weighted_pct"], r["weight"]) for r in rows]),
+    }
+
+
 def compute(rows: list[dict] | None = None) -> dict:
-    """Both GPA numbers under both credit models, plus the per-course breakdown."""
+    """The GPA, plus the per-course breakdown that produced it."""
     rows = course_rows() if rows is None else rows
     for r in rows:
         r["weighted_pct"] = _weighted(r["final_pct"], r["level"])
         r["bonus"] = BONUS.get(r["level"], 0.0)
 
-    equal = [(r, 1.0) for r in rows]
-    credited = [(r, r["credits"] or 1.0) for r in rows]
-
-    def by_year() -> list[dict]:
-        out = []
-        for year in sorted({r["year"] for r in rows}):
-            group = [r for r in rows if r["year"] == year]
-            out.append({
-                "year": year,
-                "courses": len(group),
-                "credits": round(sum(r["credits"] or 1.0 for r in group), 2),
-                "unweighted": _mean([(r["final_pct"], 1.0) for r in group]),
-                "weighted": _mean([(r["weighted_pct"], 1.0) for r in group]),
-            })
-        return out
+    years = [dict(year=year, courses=len(group),
+                  **_totals(group))
+             for year in sorted({r["year"] for r in rows})
+             for group in [[r for r in rows if r["year"] == year]]]
 
     return {
         "courses": rows,
         "count": len(rows),
-        "credits": round(sum(r["credits"] or 1.0 for r in rows), 2),
-        "unweighted": _mean([(r["final_pct"], w) for r, w in equal]),
-        "weighted": _mean([(r["weighted_pct"], w) for r, w in equal]),
-        "unweighted_credited": _mean([(r["final_pct"], w) for r, w in credited]),
-        "weighted_credited": _mean([(r["weighted_pct"], w) for r, w in credited]),
-        "years": by_year(),
+        "credits": round(sum(r["weight"] for r in rows), 4),
+        "bonus_points": round(sum(r["bonus"] * r["weight"] for r in rows), 4),
+        "years": years,
         "honors": sum(1 for r in rows if r["level"] == "honors"),
         "ap": sum(1 for r in rows if r["level"] == "ap"),
+        **_totals(rows),
     }
 
 
-def compare(official: float | None, result: dict | None = None) -> list[dict]:
-    """Rank the four models by how close they land to the official GPA.
-
-    This is the accuracy check: the model with the smallest delta is the one the
-    district uses, and a delta of zero means the local calculation is exact.
-    """
+def compare(official: dict | None = None, result: dict | None = None) -> list[dict]:
+    """Computed against the transcript's own figures. Delta zero means exact."""
     result = compute() if result is None else result
-    models = [
-        ("Weighted, equal credit", result["weighted"]),
-        ("Weighted, credit-scaled", result["weighted_credited"]),
-        ("Unweighted, equal credit", result["unweighted"]),
-        ("Unweighted, credit-scaled", result["unweighted_credited"]),
-    ]
-    out = [{"model": label, "value": val,
-            "delta": None if (official is None or val is None) else round(val - official, 3)}
-           for label, val in models]
-    out.sort(key=lambda m: (m["delta"] is None, abs(m["delta"] or 0)))
+    official = official or {}
+    out = []
+    for key, label in (("weighted", "Weighted GPA"), ("unweighted", "Unweighted GPA")):
+        value, want = result[key], official.get(key)
+        out.append({
+            "model": label,
+            "value": value,
+            "official": want,
+            # Four decimals: the transcript prints 99.1579, and a match has to be
+            # a match at that precision to mean anything.
+            "delta": None if (want is None or value is None) else round(value - want, 4),
+        })
     return out
 
 

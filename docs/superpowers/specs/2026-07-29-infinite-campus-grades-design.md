@@ -199,10 +199,40 @@ Three consequences:
   levels live in `gpa_levels`, keyed by course name so they survive a resync.
 
 A course counts only when Campus's own `includedInTermGPA` is set, which is how
-Phys. Ed., lunch and lab sections drop out on their own. The catalog publishes no
-exclusion list, no class-rank formula, and no GPA starting grade. It does publish
-credits as "(Year Course, 1 Unit)" / "(Semester Course, .5 Unit)", which matches
-the marking-period inference the sync makes.
+Phys. Ed., lunch and lab sections drop out on their own.
+
+**The combining formula**, which the catalog does not publish, is pinned exactly
+by an official Mepham transcript:
+
+```
+unweighted = SUM(mark * weight) / SUM(weight)
+weighted   = SUM((mark + bonus) * weight) / SUM(weight)
+```
+
+Verified against the transcript generated 2026-07-29 over grades 8 and 9:
+`SUM(weight)` 9.5, `SUM(mark * weight)` 928 → **97.6842**, plus 14 points of bonus
+→ **99.1579**. Both reproduce the printed figures to four decimals, and
+`test_reproduces_the_official_transcript_exactly` locks that in.
+
+Two things the transcript settled that guessing had gotten wrong:
+
+- **Weight is not credit.** Phys. Ed. prints 0.500 credit against Weight 0.0000 —
+  it earns credit and no GPA. Campus publishes neither number.
+- **The marking-period inference is only an estimate.** It calls STEAM Comp Sci a
+  half-credit semester course; the transcript prints 0.25. So weight is inferred
+  by default and pinnable per course in `gpa_levels`, alongside level.
+
+There is exactly one model now, not a menu of four. The transcript's own figures
+are stored and shown as a delta beside the computed pair, so a regression is
+visible immediately rather than silently plausible.
+
+The catalog publishes no exclusion list, no class-rank formula, and no GPA
+starting grade. It does publish credits as "(Year Course, 1 Unit)" /
+"(Semester Course, .5 Unit)".
+
+The GPA card renders **outside** the Campus-configured gate: it is computed from
+stored final grades and hand-entered years, so it survives an unreachable portal —
+which is the point of the feature.
 
 Inputs come from each course's posted **Final Grade** task. Two rules make this
 correct, both learned from live data:

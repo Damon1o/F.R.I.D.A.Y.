@@ -175,3 +175,9 @@ CREATE TABLE IF NOT EXISTS gpa_levels (
     level       TEXT NOT NULL,
     updated_at  TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
 );
+
+-- Weight is the GPA denominator, and it is not credit: the transcript prints
+-- Phys. Ed. at 0.500 credit against Weight 0.0000. Campus publishes neither, so
+-- the sync infers weight and the user pins it when a transcript disagrees.
+ALTER TABLE gpa_levels ADD COLUMN IF NOT EXISTS weight REAL;
+ALTER TABLE gpa_levels ALTER COLUMN level DROP NOT NULL;

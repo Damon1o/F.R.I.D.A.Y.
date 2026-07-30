@@ -445,6 +445,14 @@ def test_analysis_endpoint_400s_with_no_data(client):
 # 7. Navigation
 # --------------------------------------------------------------------------- #
 
+def test_configured_page_renders_the_ranking(ctx, campus_stub, client):
+    models.sync(force=True)
+    html = client.get("/grades").get_data(as_text=True)
+    assert "Weakest courses" in html
+    assert "AP Calculus" in html
+    assert "Connect Infinite Campus" not in html
+
+
 def test_nav_has_both_educational_links(client):
     html = client.get("/notes").get_data(as_text=True)
     assert 'href="/grades"' in html

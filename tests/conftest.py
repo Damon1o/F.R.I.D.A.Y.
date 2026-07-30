@@ -32,6 +32,19 @@ def app():
     return app
 
 
+@pytest.fixture(autouse=True)
+def _no_campus_network(monkeypatch):
+    """No test may reach Infinite Campus.
+
+    The app fixture truncates `settings`, which empties the sync throttle, so any
+    request to /grades would otherwise log in to the real portal and write real
+    courses into the test database. Tests that need a client set these back.
+    """
+    for key in ("CAMPUS_DISTRICT", "CAMPUS_STATE", "CAMPUS_USER", "CAMPUS_PASS",
+                "CAMPUS_BASE", "CAMPUS_APP"):
+        monkeypatch.delenv(key, raising=False)
+
+
 @pytest.fixture
 def client(app):
     return app.test_client()

@@ -21,6 +21,11 @@
   </div>
 </section>
 
+{# GPA sits outside the Campus gate on purpose: it is computed from stored final
+   grades and hand-entered years, so it still works when Campus is unreachable —
+   or when the school hides the number. #}
+{% include '_gpa_card.html' %}
+
 {% if not configured %}
 <section class="card">
   <div class="card-head">
@@ -85,97 +90,6 @@
     </button>
   </div>
   <p class="subtle" id="analysis-text">Ask F.R.I.D.A.Y. what these numbers mean.</p>
-</section>
-
-{# ---- GPA: computed locally, because the portal publishes none ---- #}
-<section class="card gpa-card">
-  <div class="card-head">
-    <h2>GPA</h2>
-    <span class="tag label-mono">{{ gpa.count }} courses · {{ gpa.credits }} credits</span>
-  </div>
-
-  {% if gpa.count %}
-  <div class="gpa-figures">
-    <div class="metric">
-      <span class="label-mono">Weighted</span>
-      <strong class="metric-val">{{ '%.2f' | format(gpa.weighted) }}</strong>
-      <span class="faint">{{ gpa.honors }} honors · {{ gpa.ap }} AP</span>
-    </div>
-    <div class="metric">
-      <span class="label-mono">Unweighted</span>
-      <strong class="metric-val">{{ '%.2f' | format(gpa.unweighted) }}</strong>
-      <span class="faint">no level bonus</span>
-    </div>
-  </div>
-
-  {# The portal publishes no credit hours, so both models are shown and the one
-     matching a report card is the district's. #}
-  <div class="gpa-check">
-    <label class="label-mono" for="official-gpa">Official GPA (from a report card)</label>
-    <div class="gpa-check-row">
-      <input class="field" type="number" step="0.01" id="official-gpa" placeholder="e.g. 98.50"
-        value="{{ official_gpa if official_gpa is not none else '' }}">
-      <button class="btn-ghost" id="official-save" type="button">Compare</button>
-    </div>
-    <ul class="rank-list" id="gpa-models">
-      {% for m in gpa_models %}
-      <li class="rank-row">
-        <span class="rank-name">{{ m.model }}</span>
-        <span class="rank-val">{{ '%.2f' | format(m.value) }}</span>
-        <span class="rank-val {{ 'is-match' if m.delta == 0 }}">
-          {%- if m.delta is none %}—{% elif m.delta == 0 %}exact{% else %}{{ '%+.2f' | format(m.delta) }}{% endif -%}
-        </span>
-      </li>
-      {% endfor %}
-    </ul>
-  </div>
-
-  <ul class="rank-list gpa-courses">
-    {% for c in gpa.courses %}
-    <li class="rank-row">
-      <span class="rank-name">
-        {{ c.name }}
-        <em class="faint">{{ c.year }}{% if c.credits != 1 %} · {{ c.credits }} cr{% endif %}</em>
-      </span>
-      {% if c.source == 'synced' %}
-      {# Detection reads the course name, and the catalog weights "Advanced
-         Courses" at +2 while also listing courses merely named Advanced
-         Photography. Either guess moves the GPA, so it stays correctable. #}
-      <select class="field level-select {{ 'is-pinned' if c.pinned }}" data-gpa-level="{{ c.name }}"
-        aria-label="Level for {{ c.name }}">
-        <option value="auto" {{ 'selected' if not c.pinned }}>auto ({{ c.detected }})</option>
-        {% for lvl in levels %}
-        <option value="{{ lvl }}" {{ 'selected' if c.pinned and c.level == lvl }}>
-          {{ lvl }}{% if lvl != 'regular' %} +{{ '%.0f' | format(gpa_bonus[lvl]) }}{% endif %}
-        </option>
-        {% endfor %}
-      </select>
-      {% elif c.bonus %}
-      <span class="tag label-mono">{{ c.level }} +{{ '%.0f' | format(c.bonus) }}</span>
-      {% endif %}
-      <span class="rank-val">{{ '%.0f' | format(c.final_pct) }}</span>
-      {% if c.source == 'manual' %}
-      <button class="icon-btn danger" data-gpa-delete="{{ c.id }}" aria-label="Remove">{{ icon('trash-2', 14) }}</button>
-      {% endif %}
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p class="subtle">No final grades yet. GPA appears once courses post a Final Grade.</p>
-  {% endif %}
-
-  {# 8th grade and any other year Campus won't serve: the portal only returns the
-     current and next enrollment. #}
-  <form class="gpa-add" id="gpa-add">
-    <input class="field" name="year" placeholder="Year (e.g. Grade 8)" required>
-    <input class="field" name="name" placeholder="Course" required>
-    <input class="field" name="final_pct" type="number" step="0.01" placeholder="Final" required>
-    <select class="field" name="level">
-      {% for lvl in levels %}<option value="{{ lvl }}">{{ lvl }}</option>{% endfor %}
-    </select>
-    <input class="field" name="credits" type="number" step="0.5" value="1" aria-label="Credits">
-    <button class="btn-ghost" type="submit">{{ icon('plus', 16) }}<span>Add year</span></button>
-  </form>
 </section>
 
 {# ---- Weak-spot ranking (SQL only). Narrow: the rows are a name, a short meter

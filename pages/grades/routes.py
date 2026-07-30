@@ -98,11 +98,21 @@ def gpa_set_level():
     return jsonify({"name": body.get("name"), "level": level, "gpa": gpa.compute()})
 
 
+@grades_bp.route("/api/gpa/weight", methods=["POST"])
+def gpa_set_weight():
+    body = request.get_json(silent=True) or {}
+    try:
+        weight = gpa.set_weight(body.get("name"), body.get("weight"))
+    except ValidationError as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify({"name": body.get("name"), "weight": weight, "gpa": gpa.compute()})
+
+
 @grades_bp.route("/api/gpa/official", methods=["POST"])
 def gpa_set_official():
     body = request.get_json(silent=True) or {}
     try:
-        official = models.set_official_gpa(body.get("official"))
+        official = models.set_official_gpa(body.get("weighted"), body.get("unweighted"))
     except (TypeError, ValueError):
-        return jsonify({"error": "official must be a number"}), 400
+        return jsonify({"error": "GPA values must be numbers"}), 400
     return jsonify({"official": official, "models": gpa.compare(official)})

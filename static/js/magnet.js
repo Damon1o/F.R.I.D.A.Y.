@@ -3,8 +3,8 @@
 // transform goes straight on the card, CSS owns the easing (see 20c in app.css).
 (function () {
   var SELECTOR = '.card, .widget, .metric';
-  var PADDING = 50;      // pull starts this far outside the card
-  var STRENGTH = 24;     // higher = less movement (cards are big, so > React's 2)
+  var PADDING = 20;      // pull starts this far outside the card
+  var STRENGTH = 12;     // higher = less movement (cards are big, so > React's 2)
 
   if (matchMedia('(pointer: coarse)').matches ||
     matchMedia('(prefers-reduced-motion: reduce)').matches) return;

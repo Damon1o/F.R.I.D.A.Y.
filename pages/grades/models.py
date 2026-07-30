@@ -191,22 +191,26 @@ def sync(force: bool = False) -> dict:
     return result
 
 
-def official_gpa() -> float | None:
-    """The GPA off a report card, if the user has entered one. Accuracy baseline."""
-    raw = _get(OFFICIAL_GPA_KEY)
-    try:
-        return float(raw) if raw else None
-    except ValueError:
-        return None
+def official_gpa() -> dict:
+    """The GPA figures off the transcript. The baseline the calculation is checked against."""
+    out = {}
+    for kind in ("weighted", "unweighted"):
+        raw = _get(f"{OFFICIAL_GPA_KEY}_{kind}")
+        try:
+            out[kind] = float(raw) if raw else None
+        except ValueError:
+            out[kind] = None
+    return out
 
 
-def set_official_gpa(value) -> float | None:
-    if value in (None, ""):
-        _clear(OFFICIAL_GPA_KEY)
-        return None
-    official = float(value)
-    _set(OFFICIAL_GPA_KEY, str(official))
-    return official
+def set_official_gpa(weighted=None, unweighted=None) -> dict:
+    for kind, value in (("weighted", weighted), ("unweighted", unweighted)):
+        key = f"{OFFICIAL_GPA_KEY}_{kind}"
+        if value in (None, ""):
+            _clear(key)
+        else:
+            _set(key, str(float(value)))
+    return official_gpa()
 
 
 def status() -> dict:

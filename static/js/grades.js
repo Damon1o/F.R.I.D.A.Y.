@@ -57,12 +57,25 @@
     });
   });
 
+  document.querySelectorAll('[data-gpa-weight]').forEach((inp) => {
+    inp.addEventListener('change', async () => {
+      const r = await fetch('/api/gpa/weight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: inp.dataset.gpaWeight, weight: inp.value }),
+      });
+      if (r.ok) location.reload();
+    });
+  });
+
   document.getElementById('official-save')?.addEventListener('click', async () => {
-    const val = document.getElementById('official-gpa').value;
     const r = await fetch('/api/gpa/official', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ official: val }),
+      body: JSON.stringify({
+        weighted: document.getElementById('official-weighted').value,
+        unweighted: document.getElementById('official-unweighted').value,
+      }),
     });
     if (r.ok) location.reload();
   });

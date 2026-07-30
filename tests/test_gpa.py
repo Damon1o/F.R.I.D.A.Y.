@@ -5,32 +5,42 @@ from core.db import execute
 from pages.calendar.models import ValidationError
 from pages.grades import gpa, models
 
-# The real 9th-grade year: posted finals, five honors courses, two semester
-# courses, and a Phys. Ed. that Campus excludes from the GPA.
+# Straight off the official Mepham transcript generated 2026-07-29. Course, Mark,
+# Weight — the transcript's own three columns.
 YEAR_9 = [
-    ("Mandarin 2H", 100, "honors", 1.0),
-    ("STEAM Comp Sci", 100, "regular", 0.5),
-    ("STEAM Research", 100, "regular", 0.5),
-    ("Design/Draw - Prod", 99, "regular", 1.0),
-    ("Global Hist & Geog 1 H", 98, "honors", 1.0),
-    ("Biology H", 98, "honors", 1.0),
-    ("Geometry H", 97, "honors", 1.0),
-    ("English 1 H", 96, "honors", 1.0),
+    ("Mandarin 2H", 100, 1.0),
+    ("STEAM Comp Sci", 100, 0.25),
+    ("STEAM Research", 100, 0.25),
+    ("Design/Draw - Prod", 99, 1.0),
+    ("Global Hist & Geog 1 H", 98, 1.0),
+    ("Biology H", 98, 1.0),
+    ("Geometry H", 97, 1.0),
+    ("English 1 H", 96, 1.0),
 ]
+GRADE_8 = [("Algebra 1A", 95, "honors", 1.0),      # Regents Algebra taken in 8th
+           ("Mandarin I-8", 99, "regular", 1.0),
+           ("PS: Earth Science A", 96, "honors", 1.0)]
+
+# Transcript Statistics, verbatim.
+OFFICIAL = {"weighted": 99.1579, "unweighted": 97.6842}
+
+# Grade 9 alone: sum(weight) 6.5, sum(mark*weight) 638, bonus 10.
+Y9_WEIGHT, Y9_MARKS, Y9_BONUS = 6.5, 638, 10
 
 
 @pytest.fixture
 def year9(ctx):
-    """Seed the courses table the way a sync would."""
-    for i, (name, final, level, credits) in enumerate(YEAR_9):
+    """Seed the courses table the way a sync would, with transcript weights."""
+    for i, (name, final, weight) in enumerate(YEAR_9):
         execute(
             "INSERT INTO courses (section_id, name, grade_pct, final_pct, in_gpa, credits, "
             "level, synced_at) VALUES (%s, %s, %s, %s, 1, %s, %s, '2026-07-29 00:00:00')",
-            (str(900 + i), name, final, final, credits, level),
+            (str(900 + i), name, final, final, weight, gpa.detect_level(name)),
         )
+    # Phys. Ed. prints 0.500 credit against Weight 0.0000; Campus flags it out.
     execute(
         "INSERT INTO courses (section_id, name, grade_pct, final_pct, in_gpa, credits, level, "
-        "synced_at) VALUES ('999', 'Phys. Ed. 9', 100, 100, 0, 1, 'regular', "
+        "synced_at) VALUES ('999', 'Phys. Ed. 9', 100, 100, 0, 0.5, 'regular', "
         "'2026-07-29 00:00:00')"
     )
 
@@ -77,18 +87,63 @@ def test_bonus_scale_matches_the_published_catalog():
 # --------------------------------------------------------------------------- #
 
 def test_pinned_level_beats_detection_and_moves_the_gpa(year9):
-    before = gpa.compute()["weighted"]
-    gpa.set_level("Design/Draw - Prod", "ap")     # regular -> +5
+    gpa.set_level("Design/Draw - Prod", "ap")     # regular -> +5, weight 1
     after = gpa.compute()
-    assert after["weighted"] == pytest.approx(before + 5 / 8)
+    assert after["weighted"] == pytest.approx((Y9_MARKS + Y9_BONUS + 5) / Y9_WEIGHT)
     row = next(c for c in after["courses"] if c["name"] == "Design/Draw - Prod")
-    assert (row["level"], row["detected"], row["pinned"]) == ("ap", "regular", True)
+    assert (row["level"], row["detected"], row["level_pinned"]) == ("ap", "regular", True)
 
 
 def test_auto_clears_the_pin(year9):
     gpa.set_level("Design/Draw - Prod", "ap")
     assert gpa.set_level("Design/Draw - Prod", "auto") is None
-    assert gpa.compute()["weighted"] == pytest.approx(99.75)
+    assert gpa.compute()["weighted"] == pytest.approx((Y9_MARKS + Y9_BONUS) / Y9_WEIGHT)
+
+
+# --------------------------------------------------------------------------- #
+# Weight pins: the transcript's Weight column, which Campus never sends
+# --------------------------------------------------------------------------- #
+
+def test_pinned_weight_overrides_the_inference(year9):
+    """The sync infers 0.5 for a two-quarter course; the transcript says 0.25."""
+    execute("UPDATE courses SET credits = 0.5 WHERE name = 'STEAM Comp Sci'")
+    assert gpa.compute()["credits"] == pytest.approx(Y9_WEIGHT + 0.25)
+    gpa.set_weight("STEAM Comp Sci", 0.25)
+    after = gpa.compute()
+    assert after["credits"] == pytest.approx(Y9_WEIGHT)
+    row = next(c for c in after["courses"] if c["name"] == "STEAM Comp Sci")
+    assert (row["weight"], row["inferred_weight"], row["weight_pinned"]) == (0.25, 0.5, True)
+
+
+def test_weight_pin_clears(year9):
+    gpa.set_weight("Design/Draw - Prod", 3)
+    assert gpa.compute()["credits"] == pytest.approx(Y9_WEIGHT + 2)
+    assert gpa.set_weight("Design/Draw - Prod", "auto") is None
+    assert gpa.compute()["credits"] == pytest.approx(Y9_WEIGHT)
+
+
+def test_level_and_weight_pins_coexist(year9):
+    gpa.set_level("Design/Draw - Prod", "ap")
+    gpa.set_weight("Design/Draw - Prod", 0.5)
+    row = next(c for c in gpa.compute()["courses"] if c["name"] == "Design/Draw - Prod")
+    assert (row["level"], row["weight"]) == ("ap", 0.5)
+
+
+def test_set_weight_rejects_bad_input(ctx):
+    with pytest.raises(ValidationError):
+        gpa.set_weight("Biology H", "abc")
+    with pytest.raises(ValidationError):
+        gpa.set_weight("Biology H", -1)
+    with pytest.raises(ValidationError):
+        gpa.set_weight("", 1)
+
+
+def test_weight_api(client, year9):
+    r = client.post("/api/gpa/weight", json={"name": "Design/Draw - Prod", "weight": 0.5})
+    assert r.status_code == 200
+    assert r.get_json()["gpa"]["credits"] == pytest.approx(Y9_WEIGHT - 0.5)
+    assert client.post("/api/gpa/weight",
+                       json={"name": "X", "weight": "abc"}).status_code == 400
 
 
 def test_pin_survives_a_resync(year9):
@@ -109,7 +164,8 @@ def test_set_level_rejects_bad_input(ctx):
 def test_level_api(client, year9):
     r = client.post("/api/gpa/level", json={"name": "Design/Draw - Prod", "level": "ap"})
     assert r.status_code == 200
-    assert r.get_json()["gpa"]["weighted"] == pytest.approx(99.75 + 5 / 8)
+    assert r.get_json()["gpa"]["weighted"] == pytest.approx(
+        (Y9_MARKS + Y9_BONUS + 5) / Y9_WEIGHT)
     assert client.post("/api/gpa/level", json={"name": "X", "level": "bogus"}).status_code == 400
 
 
@@ -123,19 +179,37 @@ def test_gpa_excludes_courses_campus_excludes(year9):
     assert "Phys. Ed. 9" not in {c["name"] for c in result["courses"]}
 
 
-def test_unweighted_and_weighted_equal_credit(year9):
+def test_the_formula_is_sum_of_mark_times_weight(year9):
     result = gpa.compute()
-    # 100+100+100+99+98+98+97+96 = 788, over 8 courses.
-    assert result["unweighted"] == pytest.approx(98.50)
-    # Five honors courses at +2 each: 798 over 8.
-    assert result["weighted"] == pytest.approx(99.75)
+    assert result["credits"] == pytest.approx(Y9_WEIGHT)
+    assert result["bonus_points"] == pytest.approx(Y9_BONUS)
+    assert result["unweighted"] == pytest.approx(Y9_MARKS / Y9_WEIGHT)
+    assert result["weighted"] == pytest.approx((Y9_MARKS + Y9_BONUS) / Y9_WEIGHT)
 
 
-def test_credit_scaled_models(year9):
+def test_reproduces_the_official_transcript_exactly(year9):
+    """The whole feature in one assertion: grades 8 and 9 must land on the
+    transcript's printed 99.1579 / 97.6842."""
+    for name, mark, level, weight in GRADE_8:
+        gpa.add_manual("2024-2025 Grade 08", name, mark, level, weight)
+
     result = gpa.compute()
-    assert result["credits"] == pytest.approx(7.0)   # six full-year, two half
-    assert result["unweighted_credited"] == pytest.approx(688 / 7)
-    assert result["weighted_credited"] == pytest.approx(698 / 7)
+    assert result["credits"] == pytest.approx(9.5)
+    assert result["bonus_points"] == pytest.approx(14.0)
+    assert round(result["weighted"], 4) == OFFICIAL["weighted"]
+    assert round(result["unweighted"], 4) == OFFICIAL["unweighted"]
+
+    for m in gpa.compare(OFFICIAL, result):
+        assert m["delta"] == 0, f"{m['model']} is off by {m['delta']}"
+
+
+def test_zero_weight_course_contributes_nothing(year9):
+    """Phys. Ed. is Weight 0.0000 on the transcript. Pinning it to zero must be a
+    no-op rather than a division-by-zero or a silent inclusion."""
+    before = gpa.compute()["weighted"]
+    execute("UPDATE courses SET in_gpa = 1 WHERE name = 'Phys. Ed. 9'")
+    gpa.set_weight("Phys. Ed. 9", 0)
+    assert gpa.compute()["weighted"] == pytest.approx(before)
 
 
 def test_ap_earns_five_points(ctx):
@@ -158,26 +232,27 @@ def test_empty_gpa_is_none_not_a_crash(ctx):
 # Accuracy check against the official number
 # --------------------------------------------------------------------------- #
 
-def test_compare_ranks_the_matching_model_first(year9):
-    ranked = gpa.compare(98.50)
-    assert ranked[0]["model"] == "Unweighted, equal credit"
-    assert ranked[0]["delta"] == 0
-    assert all(abs(m["delta"]) >= abs(ranked[0]["delta"]) for m in ranked)
+def test_compare_reports_the_gap_to_the_transcript(year9):
+    checked = gpa.compare({"weighted": 99.0, "unweighted": 98.0})
+    by_model = {m["model"]: m for m in checked}
+    assert by_model["Weighted GPA"]["delta"] == pytest.approx(
+        round((Y9_MARKS + Y9_BONUS) / Y9_WEIGHT - 99.0, 4))
+    assert by_model["Unweighted GPA"]["official"] == 98.0
 
 
-def test_compare_without_an_official_number_still_reports_values(year9):
-    ranked = gpa.compare(None)
-    assert len(ranked) == 4
-    assert all(m["delta"] is None for m in ranked)
-    assert all(m["value"] is not None for m in ranked)
+def test_compare_without_transcript_figures_still_reports_values(year9):
+    checked = gpa.compare(None)
+    assert len(checked) == 2
+    assert all(m["delta"] is None and m["value"] is not None for m in checked)
 
 
 def test_official_gpa_round_trips(ctx):
-    assert models.official_gpa() is None
-    models.set_official_gpa("98.5")
-    assert models.official_gpa() == pytest.approx(98.5)
-    models.set_official_gpa(None)
-    assert models.official_gpa() is None
+    assert models.official_gpa() == {"weighted": None, "unweighted": None}
+    models.set_official_gpa("99.1579", "97.6842")
+    assert models.official_gpa() == {"weighted": pytest.approx(99.1579),
+                                     "unweighted": pytest.approx(97.6842)}
+    models.set_official_gpa(None, None)
+    assert models.official_gpa() == {"weighted": None, "unweighted": None}
 
 
 # --------------------------------------------------------------------------- #
@@ -189,9 +264,11 @@ def test_manual_years_join_the_calculation(year9):
     gpa.add_manual("Grade 8", "Earth Science", 90, "regular", 1)
     result = gpa.compute()
     assert result["count"] == 10
-    assert result["unweighted"] == pytest.approx((788 + 95 + 90) / 10)
-    # Honors bonus applies to the hand-entered course too: six honors now.
-    assert result["weighted"] == pytest.approx((798 + 97 + 90) / 10)
+    assert result["credits"] == pytest.approx(Y9_WEIGHT + 2)
+    assert result["unweighted"] == pytest.approx((Y9_MARKS + 95 + 90) / (Y9_WEIGHT + 2))
+    # The honors bonus applies to the hand-entered course too.
+    assert result["weighted"] == pytest.approx(
+        (Y9_MARKS + Y9_BONUS + 97 + 90) / (Y9_WEIGHT + 2))
     years = {y["year"]: y for y in result["years"]}
     assert set(years) == {"current", "Grade 8"}
     assert years["Grade 8"]["unweighted"] == pytest.approx(92.5)
@@ -225,7 +302,7 @@ def test_manual_entry_rejects_bad_input(ctx, kwargs):
 def test_gpa_api_returns_models_and_official(client):
     body = client.get("/api/gpa").get_json()
     assert set(body) == {"gpa", "official", "models"}
-    assert len(body["models"]) == 4
+    assert [m["model"] for m in body["models"]] == ["Weighted GPA", "Unweighted GPA"]
 
 
 def test_gpa_course_api_round_trip(client):
@@ -247,10 +324,10 @@ def test_gpa_course_api_rejects_bad_input(client):
 
 
 def test_official_gpa_api(client):
-    r = client.post("/api/gpa/official", json={"official": 98.5})
+    r = client.post("/api/gpa/official", json={"weighted": 99.1579, "unweighted": 97.6842})
     assert r.status_code == 200
-    assert r.get_json()["official"] == pytest.approx(98.5)
-    assert client.post("/api/gpa/official", json={"official": "nope"}).status_code == 400
+    assert r.get_json()["official"]["weighted"] == pytest.approx(99.1579)
+    assert client.post("/api/gpa/official", json={"weighted": "nope"}).status_code == 400
 
 
 # --------------------------------------------------------------------------- #
@@ -258,8 +335,21 @@ def test_official_gpa_api(client):
 # --------------------------------------------------------------------------- #
 
 def test_grades_page_shows_gpa_and_drops_the_category_tables(client, year9):
+    for name, mark, level, weight in GRADE_8:
+        gpa.add_manual("2024-2025 Grade 08", name, mark, level, weight)
+    models.set_official_gpa(OFFICIAL["weighted"], OFFICIAL["unweighted"])
     html = client.get("/grades").get_data(as_text=True)
-    assert "98.50" in html and "99.75" in html
-    assert "Weakest courses" in html
+    assert "99.1579" in html and "97.6842" in html
+    assert html.count("exact") >= 2      # both figures match the transcript
+    # "Weakest courses" needs a configured Campus; see test_grades.py.
     assert "Weakest kinds of classwork" not in html
     assert "By course and category" not in html
+
+
+def test_gpa_renders_without_campus_configured(client, year9):
+    """The GPA is computed locally, so it must survive an unreachable portal —
+    that is the whole point of the feature."""
+    html = client.get("/grades").get_data(as_text=True)
+    assert "Connect Infinite Campus" in html      # Campus really is unconfigured
+    assert "97.6842" not in html                  # no grade 8 seeded here
+    assert f"{Y9_MARKS / Y9_WEIGHT:.4f}" in html  # ...but grade 9 still computes

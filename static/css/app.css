@@ -1741,3 +1741,8 @@ body {
 
 .level-select { flex: 0 0 auto; padding: 4px var(--s-2); font-size: var(--text-body-sm); }
 .level-select.is-pinned { border-color: var(--hairline-strong); color: var(--on-surface); }
+
+.weight-input { flex: 0 0 4.5rem; padding: 4px var(--s-2); font-size: var(--text-body-sm); }
+.weight-input.is-pinned { border-color: var(--hairline-strong); color: var(--on-surface); }
+
+.gpa-years { border-top: 1px solid var(--hairline); padding-top: var(--s-3); }

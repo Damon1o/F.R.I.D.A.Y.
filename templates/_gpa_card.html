@@ -1,0 +1,118 @@
+{# GPA, computed locally. The portal publishes no GPA and no transcript endpoint,
+   so this is derived from posted final grades plus hand-entered years. Rendered
+   outside the Campus gate: it must still work when the portal is unreachable. #}
+<section class="card gpa-card">
+  <div class="card-head">
+    <h2>GPA</h2>
+    <span class="tag label-mono">{{ gpa.count }} courses · {{ '%g' | format(gpa.credits) }} weight</span>
+  </div>
+
+  {% if gpa.count %}
+  <div class="gpa-figures">
+    <div class="metric">
+      <span class="label-mono">Weighted</span>
+      <strong class="metric-val">{{ '%.4f' | format(gpa.weighted) }}</strong>
+      <span class="faint">{{ gpa.honors }} honors · {{ gpa.ap }} AP · +{{ '%g' | format(gpa.bonus_points) }} pts</span>
+    </div>
+    <div class="metric">
+      <span class="label-mono">Unweighted</span>
+      <strong class="metric-val">{{ '%.4f' | format(gpa.unweighted) }}</strong>
+      <span class="faint">no level bonus</span>
+    </div>
+    <div class="metric">
+      <span class="label-mono">Total weight</span>
+      <strong class="metric-val">{{ '%g' | format(gpa.credits) }}</strong>
+      <span class="faint">sum(mark × weight) ÷ sum(weight)</span>
+    </div>
+  </div>
+
+  {# The transcript's own figures are the accuracy baseline. Four decimals,
+     because that is the precision the transcript prints. #}
+  <div class="gpa-check">
+    <label class="label-mono">Transcript figures</label>
+    <div class="gpa-check-row">
+      <input class="field" type="number" step="0.0001" id="official-weighted" placeholder="Weighted"
+        value="{{ official_gpa.weighted if official_gpa.weighted is not none else '' }}">
+      <input class="field" type="number" step="0.0001" id="official-unweighted" placeholder="Unweighted"
+        value="{{ official_gpa.unweighted if official_gpa.unweighted is not none else '' }}">
+      <button class="btn-ghost" id="official-save" type="button">Check</button>
+    </div>
+    <ul class="rank-list" id="gpa-models">
+      {% for m in gpa_models %}
+      <li class="rank-row">
+        <span class="rank-name">{{ m.model }}</span>
+        <span class="rank-val">{{ '%.4f' | format(m.value) }}</span>
+        <span class="rank-val {{ 'is-match' if m.delta == 0 }}">
+          {%- if m.delta is none %}no transcript figure
+          {%- elif m.delta == 0 %}exact
+          {%- else %}{{ '%+.4f' | format(m.delta) }}{% endif -%}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <ul class="rank-list gpa-courses">
+    {% for c in gpa.courses %}
+    <li class="rank-row">
+      <span class="rank-name">{{ c.name }} <em class="faint">{{ c.year }}</em></span>
+      {% if c.source == 'synced' %}
+      {# Weight is the GPA denominator and Campus never sends it, so it is
+         inferred and pinnable. The transcript's Weight column is the truth. #}
+      <input class="field weight-input {{ 'is-pinned' if c.weight_pinned }}" type="number" step="0.25" min="0"
+        value="{{ '%g' | format(c.weight) }}" data-gpa-weight="{{ c.name }}"
+        aria-label="GPA weight for {{ c.name }}">
+      {# Detection reads the course name, and the catalog weights "Advanced
+         Courses" at +2 while also listing courses merely named Advanced
+         Photography. Either guess moves the GPA, so it stays correctable. #}
+      <select class="field level-select {{ 'is-pinned' if c.level_pinned }}" data-gpa-level="{{ c.name }}"
+        aria-label="Level for {{ c.name }}">
+        <option value="auto" {{ 'selected' if not c.level_pinned }}>auto ({{ c.detected }})</option>
+        {% for lvl in levels %}
+        <option value="{{ lvl }}" {{ 'selected' if c.level_pinned and c.level == lvl }}>
+          {{ lvl }}{% if lvl != 'regular' %} +{{ '%.0f' | format(gpa_bonus[lvl]) }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <span class="rank-val faint">{{ '%g' | format(c.weight) }} wt</span>
+      {% if c.bonus %}<span class="tag label-mono">{{ c.level }} +{{ '%.0f' | format(c.bonus) }}</span>{% endif %}
+      {% endif %}
+      <span class="rank-val">{{ '%.0f' | format(c.final_pct) }}</span>
+      {% if c.source == 'manual' %}
+      <button class="icon-btn danger" data-gpa-delete="{{ c.id }}" aria-label="Remove">{{ icon('trash-2', 14) }}</button>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+
+  {% if gpa.years | length > 1 %}
+  <ul class="rank-list gpa-years">
+    {% for y in gpa.years %}
+    <li class="rank-row">
+      <span class="rank-name">{{ y.year }} <em class="faint">{{ y.courses }} courses</em></span>
+      <span class="rank-val faint">{{ '%g' | format(y.weight) }} wt</span>
+      <span class="rank-val">{{ '%.4f' | format(y.weighted) }}</span>
+      <span class="rank-val faint">{{ '%.4f' | format(y.unweighted) }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% else %}
+  <p class="subtle">No final grades yet. GPA appears once courses post a Final Grade.</p>
+  {% endif %}
+
+  {# 8th grade and any other year Campus won't serve: the portal only returns the
+     current and next enrollment. Weight is the transcript's Weight column. #}
+  <form class="gpa-add" id="gpa-add">
+    <input class="field" name="year" placeholder="Year (e.g. 2024-2025 Grade 08)" required>
+    <input class="field" name="name" placeholder="Course" required>
+    <input class="field" name="final_pct" type="number" step="0.01" placeholder="Mark" required>
+    <select class="field" name="level">
+      {% for lvl in levels %}<option value="{{ lvl }}">{{ lvl }}</option>{% endfor %}
+    </select>
+    <input class="field" name="credits" type="number" step="0.25" value="1" placeholder="Weight"
+      aria-label="Weight">
+    <button class="btn-ghost" type="submit">{{ icon('plus', 16) }}<span>Add course</span></button>
+  </form>
+</section>
