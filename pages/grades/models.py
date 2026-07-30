@@ -84,18 +84,23 @@ def _district(client_session=None) -> dict:
 
 
 def _upsert_course(c: dict, grade: dict) -> None:
+    # school_year is what keeps a finished year finished. A section is only ever
+    # re-sent by Campus during the year it runs, so once the year turns over its
+    # rows stop being updated and keep the label — the GPA carries every year
+    # forward on its own, with no archive step to remember.
     execute(
         "INSERT INTO courses (section_id, name, teacher, period, term, grade_pct, grade_letter, "
-        "                     final_pct, in_gpa, credits, level, synced_at) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+        "                     final_pct, in_gpa, credits, level, school_year, synced_at) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
         "ON CONFLICT (section_id) DO UPDATE SET name=excluded.name, teacher=excluded.teacher, "
         "period=excluded.period, term=excluded.term, grade_pct=excluded.grade_pct, "
         "grade_letter=excluded.grade_letter, final_pct=excluded.final_pct, "
         "in_gpa=excluded.in_gpa, credits=excluded.credits, level=excluded.level, "
-        "synced_at=excluded.synced_at",
+        "school_year=excluded.school_year, synced_at=excluded.synced_at",
         (c["section_id"], c["name"], c.get("teacher"), c.get("period"), c.get("term"),
          grade.get("grade_pct"), grade.get("grade_letter"), grade.get("final_pct"),
-         grade.get("in_gpa", 0), grade.get("credits"), gpa.detect_level(c["name"]), _stamp()),
+         grade.get("in_gpa", 0), grade.get("credits"), gpa.detect_level(c["name"]),
+         gpa.school_year(c.get("end_year")), _stamp()),
     )
 
 
@@ -226,6 +231,16 @@ def status() -> dict:
 # Weak-spot ranking (SQL only, no LLM)
 # --------------------------------------------------------------------------- #
 
+# Finished years stay in `courses` so the GPA can carry them, but "where are you
+# leaking points" is a question about the year you are in. Everything below is
+# scoped to it. NULL is pre-column data, which is this year by definition.
+THIS_YEAR = "(c.school_year IS NULL OR c.school_year = %s)"
+
+
+def _year() -> tuple:
+    return (gpa.school_year(),)
+
+
 def weakest_courses() -> list[dict]:
     return [dict(r) for r in query(
         "SELECT c.section_id, c.name, c.teacher, c.grade_pct, c.grade_letter, "
@@ -235,19 +250,22 @@ def weakest_courses() -> list[dict]:
         "FROM courses c "
         "LEFT JOIN assignments a ON a.section_id = c.section_id "
         "     AND a.points IS NOT NULL AND a.total IS NOT NULL "
+        f"WHERE {THIS_YEAR} "
         "GROUP BY c.section_id, c.name, c.teacher, c.grade_pct, c.grade_letter "
-        "ORDER BY c.grade_pct ASC NULLS LAST, points_lost DESC"
+        "ORDER BY c.grade_pct ASC NULLS LAST, points_lost DESC", _year()
     )]
 
 
 def weakest_categories() -> list[dict]:
     """Across all courses: which kind of classwork costs the most."""
     return [dict(r) for r in query(
-        "SELECT category, count(*) AS n, SUM(points) AS earned, SUM(total) AS possible, "
-        "       SUM(points) / NULLIF(SUM(total), 0) * 100 AS pct "
-        "FROM assignments "
-        "WHERE category IS NOT NULL AND points IS NOT NULL AND total IS NOT NULL AND total > 0 "
-        "GROUP BY category ORDER BY pct ASC NULLS LAST"
+        "SELECT a.category, count(*) AS n, SUM(a.points) AS earned, SUM(a.total) AS possible, "
+        "       SUM(a.points) / NULLIF(SUM(a.total), 0) * 100 AS pct "
+        "FROM assignments a JOIN courses c ON c.section_id = a.section_id "
+        "WHERE a.category IS NOT NULL AND a.points IS NOT NULL "
+        "      AND a.total IS NOT NULL AND a.total > 0 "
+        f"      AND {THIS_YEAR} "
+        "GROUP BY a.category ORDER BY pct ASC NULLS LAST", _year()
     )]
 
 
@@ -258,7 +276,8 @@ def categories_by_course() -> list[dict]:
         "FROM assignments a JOIN courses c ON c.section_id = a.section_id "
         "WHERE a.category IS NOT NULL AND a.points IS NOT NULL "
         "      AND a.total IS NOT NULL AND a.total > 0 "
-        "GROUP BY c.name, a.category ORDER BY pct ASC NULLS LAST"
+        f"      AND {THIS_YEAR} "
+        "GROUP BY c.name, a.category ORDER BY pct ASC NULLS LAST", _year()
     )]
 
 
@@ -278,7 +297,8 @@ def missing_assignments(limit: int = 20) -> list[dict]:
     return [dict(r) for r in query(
         "SELECT a.name, a.due_at, a.total, c.name AS course "
         "FROM assignments a LEFT JOIN courses c ON c.section_id = a.section_id "
-        "WHERE a.missing = 1 ORDER BY a.due_at DESC NULLS LAST LIMIT %s", (limit,)
+        f"WHERE a.missing = 1 AND {THIS_YEAR} "
+        "ORDER BY a.due_at DESC NULLS LAST LIMIT %s", _year() + (limit,)
     )]
 
 
@@ -286,8 +306,8 @@ def zero_scores(limit: int = 20) -> list[dict]:
     return [dict(r) for r in query(
         "SELECT a.name, a.due_at, a.total, c.name AS course "
         "FROM assignments a LEFT JOIN courses c ON c.section_id = a.section_id "
-        "WHERE a.points = 0 AND a.total > 0 AND a.missing = 0 "
-        "ORDER BY a.due_at DESC NULLS LAST LIMIT %s", (limit,)
+        f"WHERE a.points = 0 AND a.total > 0 AND a.missing = 0 AND {THIS_YEAR} "
+        "ORDER BY a.due_at DESC NULLS LAST LIMIT %s", _year() + (limit,)
     )]
 
 

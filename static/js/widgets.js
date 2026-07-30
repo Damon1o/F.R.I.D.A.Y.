@@ -38,7 +38,6 @@
   var tempEl = document.querySelector('[data-weather-temp]');
   var condEl = document.querySelector('[data-weather-cond]');
   var locEl = document.querySelector('[data-weather-loc]');
-  var rangeEl = document.querySelector('[data-weather-range]');
 
   function unitLabel() {
     try {
@@ -54,7 +53,6 @@
           if (tempEl) tempEl.textContent = '—';
           if (condEl) condEl.textContent = d.error;
           if (locEl) locEl.textContent = '';
-          if (rangeEl) rangeEl.style.display = 'none';
           return;
         }
         var u = unitLabel();
@@ -66,15 +64,6 @@
         }
         if (locEl) {
           locEl.textContent = d.location || '';
-        }
-        if (rangeEl && d.forecast && d.forecast[0]) {
-          var today = d.forecast[0];
-          if (today.hi != null && today.lo != null) {
-            rangeEl.textContent = 'Today: ' + Math.round(today.hi) + u + ' / ' + Math.round(today.lo) + u;
-            rangeEl.style.display = 'flex';
-          } else {
-            rangeEl.style.display = 'none';
-          }
         }
       })
       .catch(function () {

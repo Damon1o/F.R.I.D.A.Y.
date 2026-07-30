@@ -9,7 +9,7 @@
 - **Ponytail**: apply the `ponytail` skill (laziest solution that works — YAGNI,
   stdlib/native before dependencies, one line before fifty) to every coding task:
   writing, adding, refactoring, fixing, reviewing code, and choosing dependencies.
-- **Design Taste**: when designing webpages or UI, always invoke the `design-taste-frontend` skill (`.claude/skills/design-taste-frontend/`) for distinctive, production-grade interfaces.
+- **Design Taste**: when designing webpages or UI, always invoke the `design-taste-frontend` skill (`~/.agents/skills/design-taste-frontend/`) for distinctive, production-grade interfaces.
 
 ## Design rules (hard)
 - No emojis / Unicode glyph icons. All icons via self-hosted, pinned **Lucide**.

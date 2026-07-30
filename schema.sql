@@ -153,6 +153,13 @@ ALTER TABLE courses ADD COLUMN IF NOT EXISTS in_gpa    INTEGER NOT NULL DEFAULT 
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS credits   REAL;
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS level     TEXT;
 
+-- School year, stamped at sync ("2025-2026"). Sync upserts on section_id and
+-- never deletes, so once a year rolls over its sections keep the label they were
+-- synced under: every finished year stays in the GPA on its own, no archiving
+-- step and nothing to remember to press. Rows synced before this column existed
+-- belong to the year that was current when it was added.
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS school_year TEXT;
+
 -- Years the portal cannot reach (the GPA starts in 8th grade, and Campus only
 -- serves the current and next enrollment). Hand-entered, never touched by sync.
 CREATE TABLE IF NOT EXISTS gpa_courses (

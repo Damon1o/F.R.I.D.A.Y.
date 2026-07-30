@@ -21,33 +21,9 @@
   </div>
 </section>
 
-{# GPA sits outside the Campus gate on purpose: it is computed from stored final
-   grades and hand-entered years, so it still works when Campus is unreachable —
-   or when the school hides the number. #}
-{% include '_gpa_card.html' %}
-
-{% if not configured %}
-<section class="card">
-  <div class="card-head">
-    <h2>Connect Infinite Campus</h2>
-  </div>
-  <p class="subtle">Set these four environment variables, then reload:</p>
-  <ul class="rank-list">
-    <li class="rank-row"><span class="rank-name">CAMPUS_DISTRICT</span><span class="rank-val">district name</span></li>
-    <li class="rank-row"><span class="rank-name">CAMPUS_STATE</span><span class="rank-val">two-letter state</span></li>
-    <li class="rank-row"><span class="rank-name">CAMPUS_USER</span><span class="rank-val">portal username</span></li>
-    <li class="rank-row"><span class="rank-name">CAMPUS_PASS</span><span class="rank-val">portal password</span></li>
-  </ul>
-</section>
-{% else %}
-
-{% if sync_error %}
-<section class="card">
-  <p class="faint">Showing the last data F.R.I.D.A.Y. pulled. Sync failed: {{ sync_error }}</p>
-</section>
-{% endif %}
-
-{# ---- Alerts: derived on read, nothing stored ---- #}
+{# Alerts stay full width above the split: they are the one thing on this page
+   that is worth reading before the numbers. ---- derived on read, nothing stored #}
+{% if configured %}
 {% set has_alerts = alerts.missing or alerts.zeros or alerts.drops %}
 {% if has_alerts %}
 <section class="card alert-strip">
@@ -80,43 +56,77 @@
   </ul>
 </section>
 {% endif %}
-
-{# ---- FRIDAY readout (LLM, button-triggered, cached by ranking hash) ---- #}
-<section class="card">
-  <div class="card-head">
-    <h2>F.R.I.D.A.Y.'s read</h2>
-    <button class="btn-primary" id="analysis-run" type="button">
-      {{ icon('zap', 16) }}<span>Analyze</span>
-    </button>
-  </div>
-  <p class="subtle" id="analysis-text">Ask F.R.I.D.A.Y. what these numbers mean.</p>
-</section>
-
-{# ---- Weak-spot ranking (SQL only). Narrow: the rows are a name, a short meter
-   and a number, so a full-width card is mostly empty. ---- #}
-<section class="card card-tight">
-  <div class="card-head">
-    <h2>Weakest courses</h2>
-  </div>
-  <ul class="rank-list">
-    {% for c in ranking.courses %}
-    <li class="rank-row">
-      <span class="rank-name">{{ c.name }}{% if c.teacher %} <em class="faint">{{ c.teacher }}</em>{% endif %}</span>
-      <span class="rank-meter">
-        <span class="rank-fill" style="width: {{ '%.0f' | format(c.grade_pct or 0) }}%"></span>
-      </span>
-      <span class="rank-val">
-        {% if c.grade_pct is not none %}{{ '%.1f' | format(c.grade_pct) }}%{% else %}—{% endif %}
-        {%- if c.grade_letter %} {{ c.grade_letter }}{% endif %}
-      </span>
-    </li>
-    {% else %}
-    <li class="empty">No courses synced yet. Hit Refresh.</li>
-    {% endfor %}
-  </ul>
-</section>
-
 {% endif %}
+
+{# GPA left, standings right. The GPA card is the tall one, so the short cards
+   share the column beside it instead of stacking under a half-empty page. #}
+<div class="grades-layout">
+  <div class="grades-main">
+    {# GPA sits outside the Campus gate on purpose: it is computed from stored
+       final grades and hand-entered years, so it still works when Campus is
+       unreachable — or when the school hides the number. #}
+    {% include '_gpa_card.html' %}
+  </div>
+
+  <div class="grades-side">
+    {% if not configured %}
+    <section class="card">
+      <div class="card-head">
+        <h2>Connect Infinite Campus</h2>
+      </div>
+      <p class="subtle">Set these four environment variables, then reload:</p>
+      <ul class="rank-list">
+        <li class="rank-row"><span class="rank-name">CAMPUS_DISTRICT</span><span class="rank-val">district name</span></li>
+        <li class="rank-row"><span class="rank-name">CAMPUS_STATE</span><span class="rank-val">two-letter state</span></li>
+        <li class="rank-row"><span class="rank-name">CAMPUS_USER</span><span class="rank-val">portal username</span></li>
+        <li class="rank-row"><span class="rank-name">CAMPUS_PASS</span><span class="rank-val">portal password</span></li>
+      </ul>
+    </section>
+    {% else %}
+
+    {% if sync_error %}
+    <section class="card">
+      <p class="faint">Showing the last data F.R.I.D.A.Y. pulled. Sync failed: {{ sync_error }}</p>
+    </section>
+    {% endif %}
+
+    {# ---- Weak-spot ranking (SQL only) ---- #}
+    <section class="card">
+      <div class="card-head">
+        <h2>Weakest courses</h2>
+      </div>
+      <ul class="rank-list">
+        {% for c in ranking.courses %}
+        <li class="rank-row">
+          <span class="rank-name">{{ c.name }}{% if c.teacher %} <em class="faint">{{ c.teacher }}</em>{% endif %}</span>
+          <span class="rank-meter">
+            <span class="rank-fill" style="width: {{ '%.0f' | format(c.grade_pct or 0) }}%"></span>
+          </span>
+          <span class="rank-val">
+            {% if c.grade_pct is not none %}{{ '%.1f' | format(c.grade_pct) }}%{% else %}—{% endif %}
+            {%- if c.grade_letter %} {{ c.grade_letter }}{% endif %}
+          </span>
+        </li>
+        {% else %}
+        <li class="empty">No courses synced yet. Hit Refresh.</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    {# ---- FRIDAY readout (LLM, button-triggered, cached by ranking hash) ---- #}
+    <section class="card">
+      <div class="card-head">
+        <h2>F.R.I.D.A.Y.'s read</h2>
+        <button class="btn-primary" id="analysis-run" type="button">
+          {{ icon('zap', 16) }}<span>Analyze</span>
+        </button>
+      </div>
+      <p class="subtle" id="analysis-text">Ask F.R.I.D.A.Y. what these numbers mean.</p>
+    </section>
+
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

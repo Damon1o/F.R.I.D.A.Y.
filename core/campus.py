@@ -80,6 +80,10 @@ def parse_courses(roster_json) -> list[dict]:
                        or _first(placement, "teacherDisplay"),
             "period": _first(placement, "periodName", "periodSequence"),
             "term": _first(placement, "termName") or _first(item, "termName"),
+            # Which school year this section belongs to. Campus does not always
+            # send it; gpa.school_year() falls back to the date.
+            "end_year": _first(item, "endYear", "schoolYearEnd")
+                        or _first(placement, "endYear"),
         }
     return list(out.values())
 

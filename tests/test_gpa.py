@@ -270,8 +270,75 @@ def test_manual_years_join_the_calculation(year9):
     assert result["weighted"] == pytest.approx(
         (Y9_MARKS + Y9_BONUS + 97 + 90) / (Y9_WEIGHT + 2))
     years = {y["year"]: y for y in result["years"]}
-    assert set(years) == {"current", "Grade 8"}
+    # Synced courses file under the school year they were synced in, so a
+    # finished year keeps its own group instead of merging into "current".
+    assert set(years) == {gpa.school_year(), "Grade 8"}
     assert years["Grade 8"]["unweighted"] == pytest.approx(92.5)
+
+
+# --------------------------------------------------------------------------- #
+# Year rollover: a finished year has to stay in the GPA on its own
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("end_year,label", [
+    (2026, "2025-2026"),
+    ("2027", "2026-2027"),
+    (None, None),      # no roster figure: the date decides
+    ("", None),
+])
+def test_school_year_label(end_year, label):
+    assert gpa.school_year(end_year) == (label or gpa.school_year())
+
+
+def test_finished_years_keep_their_own_group(year9):
+    """Last year's synced courses still count, under last year's label.
+
+    Sync upserts on section_id and never deletes, so a section stops being
+    rewritten once its year ends — the label it was stamped with is what keeps
+    the year intact with no archive step.
+    """
+    execute("UPDATE courses SET school_year = '2024-2025' WHERE section_id = '900'")
+    result = gpa.compute()
+    years = {y["year"]: y for y in result["years"]}
+    assert set(years) == {"2024-2025", gpa.school_year()}
+    assert years["2024-2025"]["courses"] == 1
+    assert result["count"] == len(YEAR_9)          # nothing dropped out
+    assert result["credits"] == pytest.approx(Y9_WEIGHT)
+
+
+def test_ranking_and_alerts_only_cover_the_current_year(year9):
+    """The GPA carries every year; "where are you leaking points" does not."""
+    execute("UPDATE courses SET school_year = '2024-2025' WHERE section_id = '900'")
+    names = {c["name"] for c in models.weakest_courses()}
+    assert "Mandarin 2H" not in names               # last year's course
+    assert "English 1 H" in names                   # this year's
+
+
+# --------------------------------------------------------------------------- #
+# 4.0 / 5.0 scales — what a college recalculates the 0-100 transcript into
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize("mark,points", [
+    # College Board BigFuture: whole letters, no plus/minus tiers.
+    (100, 4.0), (95, 4.0), (90, 4.0),
+    (89, 3.0), (80, 3.0),
+    (79, 2.0), (70, 2.0),
+    (69, 1.0), (66, 1.0),
+    (65, 1.0),          # printed table gaps here; 65 is "not below 65", so a D
+    (64, 0.0), (0, 0.0),
+])
+def test_mark_to_4_scale(mark, points):
+    assert gpa.to_points(mark) == points
+
+
+def test_scales_use_the_district_weighting(year9):
+    for name, mark, level, weight in GRADE_8:
+        gpa.add_manual("2024-2025 Grade 08", name, mark, level, weight)
+    result = gpa.compute()
+    # Every mark on the transcript is 90+, so the unweighted scale pins at 4.0.
+    assert result["scale_4"] == pytest.approx(4.0)
+    # 7 honors courses at weight 1, +0.5 each, over sum(weight) 9.5.
+    assert result["scale_5"] == pytest.approx((4.0 * 9.5 + 7 * 0.5) / 9.5)
 
 
 def test_manual_course_can_be_removed(ctx):

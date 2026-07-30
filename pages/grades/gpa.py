@@ -32,11 +32,51 @@ earns credit and no GPA. Campus publishes neither number, so weight is inferred
 from the share of marking periods a course ran and can be pinned per course — the
 transcript prints STEAM Comp Sci at 0.25 where that inference says 0.5.
 """
+from core import clock
 from core.db import execute, query
 from pages.calendar.models import ValidationError
 
 BONUS = {"regular": 0.0, "honors": 2.0, "ap": 5.0}
 LEVELS = tuple(BONUS)
+
+# The district transcript is 0-100 and carries no 4.0 figure, but colleges
+# recalculate onto their own scale before comparing applicants. College Board's
+# BigFuture table, verbatim — whole letters, no plus/minus tiers:
+#
+#     A  90-100  4.0      B  80-89  3.0      C  70-79  2.0
+#     D  66-69   1.0      E/F  below 65  0.0
+#
+# https://bigfuture.collegeboard.org/plan-for-college/college-basics/how-to-convert-gpa-4.0-scale
+#
+# D is printed as 66-69 while F is printed as "below 65", which leaves 65 in a
+# gap. Read together the only consistent reading is that 65 is not failing, so
+# the D floor is 65 — also the passing mark in New York.
+SCALE_4 = ((90, 4.0), (80, 3.0), (70, 2.0), (65, 1.0))
+
+# The 5.0 scale's own bonus. BigFuture notes that schools weight AP and honors
+# but publishes no point values, so this is the common convention: AP +1.0,
+# honors +0.5, which puts a perfect AP student at exactly 5.0. Not the
+# district's +5/+2 — those are points on a 100 mark, not on a 4.0 base.
+BONUS_5 = {"regular": 0.0, "honors": 0.5, "ap": 1.0}
+
+# School years turn over in August here, which is early enough that a June or
+# July sync still lands on the year that just ended.
+YEAR_ROLLOVER_MONTH = 8
+
+
+def school_year(end_year=None) -> str:
+    """The label a synced course is filed under, e.g. "2025-2026".
+
+    Campus's own `endYear` wins when the roster carries it; otherwise the date
+    decides. This is what makes a finished year stay finished: sync stamps the
+    label, never deletes, and next August starts writing a different one.
+    """
+    try:
+        end = int(end_year)
+    except (TypeError, ValueError):
+        now = clock.now()
+        end = now.year + 1 if now.month >= YEAR_ROLLOVER_MONTH else now.year
+    return f"{end - 1}-{end}"
 
 
 # The +2 tier, in the catalog's own words. "Advanced" is checked only after
@@ -134,6 +174,14 @@ def _weighted(pct: float, level: str) -> float:
     return pct + BONUS.get(level, 0.0)
 
 
+def to_points(mark: float) -> float:
+    """A 0-100 mark on the 4.0 scale."""
+    for floor, points in SCALE_4:
+        if mark >= floor:
+            return points
+    return 0.0
+
+
 def _mean(pairs: list[tuple[float, float]]) -> float | None:
     """Credit-weighted mean of (value, weight). None when there is nothing to average."""
     total_w = sum(w for _v, w in pairs)
@@ -143,9 +191,9 @@ def _mean(pairs: list[tuple[float, float]]) -> float | None:
 
 
 def course_rows() -> list[dict]:
-    """Every course that counts toward the GPA: synced current year + hand-entered years."""
+    """Every course that counts toward the GPA: every synced year + hand-entered years."""
     synced = query(
-        "SELECT name, final_pct, level, credits, term, 'synced' AS source "
+        "SELECT name, final_pct, level, credits, term, school_year, 'synced' AS source "
         "FROM courses WHERE in_gpa = 1 AND final_pct IS NOT NULL ORDER BY final_pct DESC"
     )
     manual = query(
@@ -158,7 +206,10 @@ def course_rows() -> list[dict]:
         pin = pinned.get(r["name"], {})
         detected = r["level"] or detect_level(r["name"])
         inferred = r["credits"] if r["credits"] is not None else 1.0
-        rows.append({"id": None, "year": "current", "name": r["name"],
+        # Rows synced before school_year existed are this year's by definition:
+        # the column was added while they were the only year in the table.
+        rows.append({"id": None, "year": r["school_year"] or school_year(),
+                     "name": r["name"],
                      "final_pct": r["final_pct"],
                      "level": pin.get("level") or detected,
                      "detected": detected,
@@ -191,6 +242,8 @@ def compute(rows: list[dict] | None = None) -> dict:
     for r in rows:
         r["weighted_pct"] = _weighted(r["final_pct"], r["level"])
         r["bonus"] = BONUS.get(r["level"], 0.0)
+        r["points_4"] = to_points(r["final_pct"])
+        r["points_5"] = r["points_4"] + BONUS_5.get(r["level"], 0.0)
 
     years = [dict(year=year, courses=len(group),
                   **_totals(group))
@@ -203,6 +256,9 @@ def compute(rows: list[dict] | None = None) -> dict:
         "credits": round(sum(r["weight"] for r in rows), 4),
         "bonus_points": round(sum(r["bonus"] * r["weight"] for r in rows), 4),
         "years": years,
+        # Same weighting as the district formula, different point scale.
+        "scale_4": _mean([(r["points_4"], r["weight"]) for r in rows]),
+        "scale_5": _mean([(r["points_5"], r["weight"]) for r in rows]),
         "honors": sum(1 for r in rows if r["level"] == "honors"),
         "ap": sum(1 for r in rows if r["level"] == "ap"),
         **_totals(rows),

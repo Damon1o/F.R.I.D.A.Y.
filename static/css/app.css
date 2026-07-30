@@ -1515,21 +1515,6 @@ input[type='range']::-moz-range-thumb {
   .has-target-cursor, .has-target-cursor * { cursor: auto; }
 }
 
-/* ---------- 20c. Magnet (React Bits Magnet, vanilla port) ---------- */
-/* magnet.js writes --mag-x/--mag-y; CSS owns the easing so the two states
-   (pulled / released) differ only by a class. */
-.is-magnet {
-  transform: translate3d(var(--mag-x, 0), var(--mag-y, 0), 0);
-  transition: transform var(--dur-slow) var(--ease-in-out);
-  will-change: transform;
-}
-
-.is-magnet.is-pulled { transition: transform var(--dur-base) var(--ease-out); }
-
-@media (pointer: coarse), (prefers-reduced-motion: reduce) {
-  .is-magnet { transform: none; transition: none; }
-}
-
 /* ---------- 21. Responsive ---------- */
 @media (max-width: 1240px) {
   :root { --friday-w: 300px; }
@@ -1706,43 +1691,222 @@ body {
 .alert-strip .icon { flex: 0 0 auto; color: var(--on-surface-faint); }
 .icon.is-down { transform: scaleY(-1); color: var(--danger); }
 
-/* Grades: a card whose rows are a label, a short meter and a number. Full width
-   would be mostly empty. */
-.card-tight { max-width: 44rem; }
-.card-tight .rank-meter { flex: 0 0 clamp(80px, 30%, 200px); }
-
-.gpa-figures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-5);
-  padding: var(--s-2) var(--s-3) var(--s-4);
+/* Grades: GPA is the tall card, so the short ones (weakest courses, the LLM
+   readout) share one column beside it rather than stacking under a page that is
+   half empty. Side column is wide enough for a name, a meter and a number. */
+.grades-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.85fr);
+  align-items: start;
+  gap: var(--gap);
 }
 
-.gpa-figures .metric { display: flex; flex-direction: column; gap: 2px; }
+.grades-main, .grades-side { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
 
-.gpa-check { padding: 0 var(--s-3) var(--s-4); border-top: 1px solid var(--hairline); }
-.gpa-check > .label-mono { display: block; padding: var(--s-4) 0 var(--s-2); }
-.gpa-check-row { display: flex; gap: var(--s-3); max-width: 26rem; }
-.gpa-check-row .field { flex: 1; }
-.rank-val.is-match { color: var(--on-surface); }
+/* In a column this narrow the teacher name only steals room from the course
+   name and truncates to nothing useful. The course is what you are ranking. */
+.grades-side .rank-name em { display: none; }
+.grades-side .rank-meter { flex: 0 0 clamp(48px, 18%, 90px); }
 
-.gpa-courses { border-top: 1px solid var(--hairline); padding-top: var(--s-3); }
+@media (max-width: 1100px) {
+  .grades-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- GPA card ----
+   One number is the answer (weighted GPA); everything else is evidence for it.
+   Every row is the same four-column grid so the marks line up as a column you
+   can scan straight down. Controls are width-capped: a <select> sized by its
+   longest option ("auto (honors)") is what used to push rows off-screen. */
+.gpa-card { gap: var(--s-5); }
+
+.gpa-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-5);
+}
+
+.gpa-hero-main { display: flex; flex-direction: column; gap: var(--s-2); }
+
+.gpa-hero-val {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 1.6rem + 3vw, 3.75rem);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.gpa-hero-side { display: flex; flex-wrap: wrap; gap: var(--s-3); }
+
+.gpa-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 6.5rem;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--glass-surface);
+}
+
+.gpa-stat strong {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.gpa-group { display: flex; flex-direction: column; gap: var(--s-2); }
+
+.gpa-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3) var(--s-1);
+  border-bottom: 1px solid var(--hairline);
+  font-size: var(--text-label);
+}
+
+.gpa-rows { display: flex; flex-direction: column; gap: 2px; }
+
+/* name | control | control | mark | delete. Controls collapse first; the mark
+   column is fixed so every number in the card sits on one vertical line. */
+.gpa-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 1fr) auto auto 3rem 1.75rem;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-body-sm);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.gpa-row:hover { background: var(--glass-hover); border-color: var(--hairline); }
+
+.gpa-course { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gpa-row.is-manual .gpa-course { color: var(--on-surface); }
+
+.gpa-meta { color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+
+.gpa-ctl {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.gpa-ctl > .label-mono { color: var(--on-surface-faint); }
+
+.gpa-weight,
+.gpa-level {
+  padding: 5px var(--s-2);
+  font-size: var(--text-body-sm);
+  font-family: var(--font-sans);
+  background: transparent;
+  border-color: transparent;
+}
+
+/* Element+attribute base rules outrank a bare class here, so keep the tag. */
+input.gpa-weight { width: 4.5rem; font-variant-numeric: tabular-nums; }
+select.gpa-level { width: 8.5rem; }
+
+.gpa-row:hover .gpa-weight,
+.gpa-row:hover .gpa-level { border-color: var(--hairline); }
+
+.gpa-weight.is-pinned,
+.gpa-level.is-pinned { border-color: var(--hairline-strong); color: var(--on-surface); }
+
+/* Marks: monochrome by default, and only a bad one earns colour. */
+.gpa-mark {
+  justify-self: end;
+  min-width: 3rem;
+  padding: 3px 0;
+  border-radius: var(--radius-xs);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--text-body);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.gpa-mark.is-high { color: var(--on-surface); }
+.gpa-mark.is-mid { color: var(--on-surface-variant); }
+.gpa-mark.is-low { color: var(--danger); background: var(--glass-hover); }
+
+.gpa-row-spacer { display: block; }
+
+.gpa-years .gpa-row { grid-template-columns: minmax(6rem, 1fr) auto 6rem 6rem; }
+.gpa-check .gpa-row { grid-template-columns: minmax(6rem, 1fr) auto 9rem; }
+.gpa-year-val {
+  justify-self: end;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.gpa-delta { justify-self: end; color: var(--on-surface-faint); font-variant-numeric: tabular-nums; }
+.gpa-delta.is-match, .is-match { color: var(--on-surface); }
+
+/* Folded panels: adding an 8th-grade course and checking the transcript are
+   occasional jobs, so they stay closed until asked for. */
+.gpa-panel { border-top: 1px solid var(--hairline); padding-top: var(--s-3); }
+
+.gpa-panel > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  list-style: none;
+  color: var(--on-surface-variant);
+  font-size: var(--text-body-sm);
+}
+
+.gpa-panel > summary::-webkit-details-marker { display: none; }
+.gpa-panel > summary:hover { background: var(--glass-hover); color: var(--on-surface); }
+.gpa-panel > summary em { font-style: normal; margin-left: auto; font-size: var(--text-label); }
+.gpa-panel[open] > summary { color: var(--on-surface); margin-bottom: var(--s-3); }
+.gpa-panel[open] > summary .icon { transform: rotate(45deg); }
+.gpa-panel .icon { transition: transform var(--dur-base) var(--ease-out); }
+.gpa-check[open] > summary .icon { transform: none; }
 
 .gpa-add {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2);
-  padding: var(--s-4) var(--s-3) var(--s-2);
-  border-top: 1px solid var(--hairline);
+  align-items: end;
+  gap: var(--s-3);
+  padding: 0 var(--s-3) var(--s-2);
 }
 
-.gpa-add .field { flex: 1 1 8rem; min-width: 0; }
-.gpa-add .field[name='name'] { flex: 2 1 12rem; }
+.gpa-add .field { flex: 1 1 6rem; min-width: 0; }
+.gpa-add .field:first-child { flex: 1 1 11rem; }
+.gpa-add .gpa-add-name { flex: 2 1 12rem; }
+.gpa-add button { flex: 0 0 auto; height: 38px; }
 
-.level-select { flex: 0 0 auto; padding: 4px var(--s-2); font-size: var(--text-body-sm); }
-.level-select.is-pinned { border-color: var(--hairline-strong); color: var(--on-surface); }
+.gpa-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s-3);
+  max-width: 30rem;
+  padding: 0 var(--s-3) var(--s-3);
+}
 
-.weight-input { flex: 0 0 4.5rem; padding: 4px var(--s-2); font-size: var(--text-body-sm); }
-.weight-input.is-pinned { border-color: var(--hairline-strong); color: var(--on-surface); }
+.gpa-check-row .field { flex: 1 1 8rem; }
+.gpa-check-row button { flex: 0 0 auto; height: 38px; }
 
-.gpa-years { border-top: 1px solid var(--hairline); padding-top: var(--s-3); }
+@media (max-width: 720px) {
+  .gpa-row { grid-template-columns: minmax(0, 1fr) 3rem; }
+  .gpa-row > .gpa-ctl,
+  .gpa-row > .gpa-meta,
+  .gpa-row > .tag { grid-column: 1; justify-self: start; }
+  .gpa-row > .gpa-mark { grid-row: 1; grid-column: 2; }
+  .gpa-row > .icon-btn, .gpa-row-spacer { grid-column: 2; justify-self: end; }
+}
