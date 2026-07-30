@@ -46,6 +46,17 @@
     });
   });
 
+  document.querySelectorAll('[data-gpa-level]').forEach((sel) => {
+    sel.addEventListener('change', async () => {
+      const r = await fetch('/api/gpa/level', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: sel.dataset.gpaLevel, level: sel.value }),
+      });
+      if (r.ok) location.reload();
+    });
+  });
+
   document.getElementById('official-save')?.addEventListener('click', async () => {
     const val = document.getElementById('official-gpa').value;
     const r = await fetch('/api/gpa/official', {

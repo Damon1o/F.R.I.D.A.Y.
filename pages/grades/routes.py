@@ -44,6 +44,7 @@ def grades_page():
         official_gpa=official,
         gpa_models=gpa.compare(official, result),
         levels=gpa.LEVELS,
+        gpa_bonus=gpa.BONUS,
     )
 
 
@@ -85,6 +86,16 @@ def gpa_add_course():
 @grades_bp.route("/api/gpa/courses/<int:row_id>", methods=["DELETE"])
 def gpa_delete_course(row_id):
     return ("", 204) if gpa.delete_manual(row_id) else (jsonify({"error": "not found"}), 404)
+
+
+@grades_bp.route("/api/gpa/level", methods=["POST"])
+def gpa_set_level():
+    body = request.get_json(silent=True) or {}
+    try:
+        level = gpa.set_level(body.get("name"), body.get("level"))
+    except ValidationError as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify({"name": body.get("name"), "level": level, "gpa": gpa.compute()})
 
 
 @grades_bp.route("/api/gpa/official", methods=["POST"])

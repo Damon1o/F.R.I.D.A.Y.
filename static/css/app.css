@@ -1738,3 +1738,6 @@ body {
 
 .gpa-add .field { flex: 1 1 8rem; min-width: 0; }
 .gpa-add .field[name='name'] { flex: 2 1 12rem; }
+
+.level-select { flex: 0 0 auto; padding: 4px var(--s-2); font-size: var(--text-body-sm); }
+.level-select.is-pinned { border-color: var(--hairline-strong); color: var(--on-surface); }

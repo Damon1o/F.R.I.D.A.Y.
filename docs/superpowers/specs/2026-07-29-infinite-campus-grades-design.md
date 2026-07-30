@@ -175,9 +175,34 @@ The portal publishes no GPA: every `transcript`, `gpa` and `reportCard` path 404
 So `pages/grades/gpa.py` derives one. That is the feature — when the school hides
 the number, the number is still here.
 
-District rules: numeric 0-100 course averages, Honors +2, AP +5, applied to the
-course average. A course counts only when Campus's own `includedInTermGPA` is set,
-which is how Phys. Ed., lunch and lab sections drop out on their own.
+The rule is the district's own, quoted from the Bellmore-Merrick *Catalog of
+Courses 2026-2027*, "Student Transcripts" (identical wording in the 25-26
+edition):
+
+> Weighted Grades: "Weighted" grades appear on the transcripts of all students.
+> Each course grade is "weighted" as follows:
+> Advanced Placement Courses — 5 points added.
+> Honors, Accelerated, and Advanced Courses — 2 points added.
+
+Source: `files.smartsites.parentsquare.com/6369/course_catalog_2026-2027.pdf`
+(the site serves it through a JS viewer; the PDF is directly addressable).
+
+Three consequences:
+
+- The bonus lands on the **course grade**, so these are numeric 0-100 averages,
+  not 4.0-scale points.
+- The +2 tier is three categories, not one: Honors, Accelerated, **and Advanced**.
+  Detection has to match all three while keeping "Advanced Placement" at +5.
+- That last point is genuinely ambiguous in practice — the district also offers
+  courses merely *named* "Advanced Photography" and "Advanced Sculpture". Either
+  guess moves the GPA, so every synced course carries a level selector and pinned
+  levels live in `gpa_levels`, keyed by course name so they survive a resync.
+
+A course counts only when Campus's own `includedInTermGPA` is set, which is how
+Phys. Ed., lunch and lab sections drop out on their own. The catalog publishes no
+exclusion list, no class-rank formula, and no GPA starting grade. It does publish
+credits as "(Year Course, 1 Unit)" / "(Semester Course, .5 Unit)", which matches
+the marking-period inference the sync makes.
 
 Inputs come from each course's posted **Final Grade** task. Two rules make this
 correct, both learned from live data:
@@ -217,6 +242,7 @@ never touched by sync.
 | `/api/gpa` | GET | Recomputed GPA, the four models, the official number |
 | `/api/gpa/courses` | POST | Add a hand-entered year's course |
 | `/api/gpa/courses/<id>` | DELETE | Remove one |
+| `/api/gpa/level` | POST | Pin a course's level, or `auto` to clear the pin |
 | `/api/gpa/official` | POST | Store the report-card GPA for the accuracy check |
 
 The page shows the GPA panel and Weakest courses. The category breakdowns

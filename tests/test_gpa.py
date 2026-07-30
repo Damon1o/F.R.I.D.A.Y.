@@ -40,13 +40,22 @@ def year9(ctx):
 # --------------------------------------------------------------------------- #
 
 @pytest.mark.parametrize("name,expected", [
+    # Campus abbreviations
     ("Biology H", "honors"),
     ("Mandarin 2H", "honors"),
     ("English 1H-Fresh Sem", "honors"),
     ("Global Hist & Geog 1 H", "honors"),
-    ("Chemistry Honors", "honors"),
+    # Catalog spellings, and the two other +2 categories the catalog names
+    ("ENGLISH 1 Honors", "honors"),
+    ("College Pre-Calculus Honors", "honors"),
+    ("Accelerated Chemistry", "honors"),
+    ("ADVANCED DRAWING AND PAINTING", "honors"),
+    ("Advanced Sculpture", "honors"),
+    # +5: "Advanced Placement" wins over the "Advanced" in it
     ("AP Calculus BC", "ap"),
-    ("Advanced Placement Physics", "ap"),
+    ("ADVANCED PLACEMENT ART AND DESIGN", "ap"),
+    ("Advanced Placement Computer Science A", "ap"),
+    # Unweighted
     ("Design/Draw - Prod", "regular"),
     ("STEAM Comp Sci", "regular"),
     ("Phys. Ed. 9", "regular"),
@@ -57,8 +66,51 @@ def test_detect_level(name, expected):
     assert gpa.detect_level(name) == expected
 
 
-def test_bonus_scale_is_the_districts():
+def test_bonus_scale_matches_the_published_catalog():
+    """Catalog of Courses, Student Transcripts: AP 5 points added,
+    Honors/Accelerated/Advanced 2 points added."""
     assert gpa.BONUS == {"regular": 0.0, "honors": 2.0, "ap": 5.0}
+
+
+# --------------------------------------------------------------------------- #
+# Level overrides
+# --------------------------------------------------------------------------- #
+
+def test_pinned_level_beats_detection_and_moves_the_gpa(year9):
+    before = gpa.compute()["weighted"]
+    gpa.set_level("Design/Draw - Prod", "ap")     # regular -> +5
+    after = gpa.compute()
+    assert after["weighted"] == pytest.approx(before + 5 / 8)
+    row = next(c for c in after["courses"] if c["name"] == "Design/Draw - Prod")
+    assert (row["level"], row["detected"], row["pinned"]) == ("ap", "regular", True)
+
+
+def test_auto_clears_the_pin(year9):
+    gpa.set_level("Design/Draw - Prod", "ap")
+    assert gpa.set_level("Design/Draw - Prod", "auto") is None
+    assert gpa.compute()["weighted"] == pytest.approx(99.75)
+
+
+def test_pin_survives_a_resync(year9):
+    gpa.set_level("Design/Draw - Prod", "honors")
+    # A sync rewrites courses.level from detection; the pin is a separate table.
+    execute("UPDATE courses SET level = 'regular' WHERE name = 'Design/Draw - Prod'")
+    row = next(c for c in gpa.compute()["courses"] if c["name"] == "Design/Draw - Prod")
+    assert row["level"] == "honors"
+
+
+def test_set_level_rejects_bad_input(ctx):
+    with pytest.raises(ValidationError):
+        gpa.set_level("", "ap")
+    with pytest.raises(ValidationError):
+        gpa.set_level("Biology H", "superhonors")
+
+
+def test_level_api(client, year9):
+    r = client.post("/api/gpa/level", json={"name": "Design/Draw - Prod", "level": "ap"})
+    assert r.status_code == 200
+    assert r.get_json()["gpa"]["weighted"] == pytest.approx(99.75 + 5 / 8)
+    assert client.post("/api/gpa/level", json={"name": "X", "level": "bogus"}).status_code == 400
 
 
 # --------------------------------------------------------------------------- #

@@ -137,7 +137,22 @@
         {{ c.name }}
         <em class="faint">{{ c.year }}{% if c.credits != 1 %} · {{ c.credits }} cr{% endif %}</em>
       </span>
-      {% if c.bonus %}<span class="tag label-mono">{{ c.level }} +{{ '%.0f' | format(c.bonus) }}</span>{% endif %}
+      {% if c.source == 'synced' %}
+      {# Detection reads the course name, and the catalog weights "Advanced
+         Courses" at +2 while also listing courses merely named Advanced
+         Photography. Either guess moves the GPA, so it stays correctable. #}
+      <select class="field level-select {{ 'is-pinned' if c.pinned }}" data-gpa-level="{{ c.name }}"
+        aria-label="Level for {{ c.name }}">
+        <option value="auto" {{ 'selected' if not c.pinned }}>auto ({{ c.detected }})</option>
+        {% for lvl in levels %}
+        <option value="{{ lvl }}" {{ 'selected' if c.pinned and c.level == lvl }}>
+          {{ lvl }}{% if lvl != 'regular' %} +{{ '%.0f' | format(gpa_bonus[lvl]) }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      {% elif c.bonus %}
+      <span class="tag label-mono">{{ c.level }} +{{ '%.0f' | format(c.bonus) }}</span>
+      {% endif %}
       <span class="rank-val">{{ '%.0f' | format(c.final_pct) }}</span>
       {% if c.source == 'manual' %}
       <button class="icon-btn danger" data-gpa-delete="{{ c.id }}" aria-label="Remove">{{ icon('trash-2', 14) }}</button>

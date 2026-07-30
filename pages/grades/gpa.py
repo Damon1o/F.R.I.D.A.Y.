@@ -4,9 +4,23 @@ The portal exposes no GPA and no transcript endpoint — every `transcript`, `gp
 and `reportCard` path 404s — so this never reads a GPA, it derives one. That is
 also the point: when the school hides the number, the number is still here.
 
-District rules, as given: grades are numeric 0-100 averages, Honors adds 2 points
-to a course average and AP adds 5. A course counts only if Campus itself marks it
-`includedInTermGPA`, which is how Phys. Ed. and lunch drop out.
+District rule, quoted from the Bellmore-Merrick Catalog of Courses 2026-2027,
+"Student Transcripts":
+
+    Weighted Grades: "Weighted" grades appear on the transcripts of all students.
+    Each course grade is "weighted" as follows:
+        Advanced Placement Courses              5 points added
+        Honors, Accelerated, and Advanced Courses   2 points added
+
+So the bonus applies to the course grade, not to a 4.0-scale point — these are
+numeric 0-100 averages. A course counts only if Campus itself marks it
+`includedInTermGPA`, which is how Phys. Ed. and lunch drop out; the catalog
+publishes no exclusion list of its own.
+
+The catalog publishes no class-rank formula and no credit weighting, which is why
+two credit models are reported below. It does publish credits per course as
+"(Year Course, 1 Unit)" / "(Semester Course, .5 Unit)", matching the marking-period
+inference the sync makes.
 
 Two credit models are reported because the portal does not publish credit hours.
 Equal-weight treats every course the same; credit-weighted scales a semester
@@ -20,19 +34,27 @@ BONUS = {"regular": 0.0, "honors": 2.0, "ap": 5.0}
 LEVELS = tuple(BONUS)
 
 
-def detect_level(name: str) -> str:
-    """Course level from its name. 'AP Biology' -> ap, 'Mandarin 2H' -> honors.
+# The +2 tier, in the catalog's own words. "Advanced" is checked only after
+# "Advanced Placement", which is the +5 tier and contains the same word.
+BONUS_2_WORDS = ("honors", "accelerated", "advanced")
 
-    Honors is marked by a trailing H on the name or on one of its words, which is
-    how this district writes it: "Biology H", "Mandarin 2H", "English 1H-Fresh Sem".
+
+def detect_level(name: str) -> str:
+    """Course level from its name, per the catalog's three weighted categories.
+
+    The catalog spells courses out ("ENGLISH 1 Honors"); Campus abbreviates the
+    same course to "English 1 H", so a trailing H counts too — that is how this
+    district writes honors in the portal: "Biology H", "Mandarin 2H",
+    "English 1H-Fresh Sem".
     """
     n = (name or "").strip()
     low = n.lower()
-    if low.startswith("ap ") or " ap " in f" {low} " or low.startswith("advanced placement"):
+    padded = f" {low} "
+    if "advanced placement" in low or padded.startswith(" ap ") or " ap " in padded:
         return "ap"
-    if "honors" in low:
+    if any(w in low for w in BONUS_2_WORDS):
         return "honors"
-    # Split on spaces and punctuation the district uses to glue names together.
+    # Split on the punctuation the district uses to glue names together.
     for word in n.replace("-", " ").replace("/", " ").split():
         if len(word) > 1 and word.endswith("H") and word[-2].isdigit():
             return "honors"   # "2H"
@@ -41,6 +63,37 @@ def detect_level(name: str) -> str:
         if word.endswith("H") and word[:-1].isalpha() and word[:-1].istitle() and len(word) > 3:
             return "honors"   # "BiologyH"
     return "regular"
+
+
+def level_overrides() -> dict[str, str]:
+    """User-pinned levels, keyed by course name. Beat detection and survive sync."""
+    return {r["course_name"]: r["level"] for r in
+            query("SELECT course_name, level FROM gpa_levels")}
+
+
+def set_level(course_name: str, level: str) -> str | None:
+    """Pin a course's level, or clear the pin with level 'auto'.
+
+    Needed because the catalog weights "Advanced Courses" at +2 and the district
+    also offers courses merely *named* Advanced Photography / Advanced Sculpture.
+    Guessing either way moves the GPA, so the call is the user's.
+    """
+    course_name = (course_name or "").strip()
+    if not course_name:
+        raise ValidationError("course_name is required")
+    level = (level or "").strip().lower()
+    if level in ("auto", ""):
+        execute("DELETE FROM gpa_levels WHERE course_name = %s", (course_name,))
+        return None
+    if level not in BONUS:
+        raise ValidationError(f"level must be auto or one of {', '.join(LEVELS)}")
+    execute(
+        "INSERT INTO gpa_levels (course_name, level) VALUES (%s, %s) "
+        "ON CONFLICT(course_name) DO UPDATE SET level=excluded.level, "
+        "updated_at=to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')",
+        (course_name, level),
+    )
+    return level
 
 
 def _weighted(pct: float, level: str) -> float:
@@ -65,15 +118,20 @@ def course_rows() -> list[dict]:
         "SELECT id, year, name, final_pct, level, credits, 'manual' AS source "
         "FROM gpa_courses ORDER BY year, name"
     )
+    pinned = level_overrides()
     rows = []
     for r in synced:
+        detected = r["level"] or detect_level(r["name"])
         rows.append({"id": None, "year": "current", "name": r["name"],
                      "final_pct": r["final_pct"],
-                     "level": r["level"] or detect_level(r["name"]),
+                     "level": pinned.get(r["name"], detected),
+                     "detected": detected,
+                     "pinned": r["name"] in pinned,
                      "credits": r["credits"] or 1.0, "source": "synced"})
     for r in manual:
         rows.append({"id": r["id"], "year": r["year"], "name": r["name"],
                      "final_pct": r["final_pct"], "level": r["level"],
+                     "detected": r["level"], "pinned": False,
                      "credits": r["credits"], "source": "manual"})
     return rows
 

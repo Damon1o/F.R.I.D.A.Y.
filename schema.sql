@@ -166,3 +166,12 @@ CREATE TABLE IF NOT EXISTS gpa_courses (
 );
 
 CREATE INDEX IF NOT EXISTS gpa_courses_year_idx ON gpa_courses (year, name);
+
+-- Course level drives the GPA bonus (AP +5; Honors/Accelerated/Advanced +2, per
+-- the district Catalog of Courses). Detection reads the course name, and names
+-- like "Advanced Photography" are genuinely ambiguous, so the user can pin one.
+CREATE TABLE IF NOT EXISTS gpa_levels (
+    course_name TEXT PRIMARY KEY,
+    level       TEXT NOT NULL,
+    updated_at  TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+);
