@@ -102,6 +102,18 @@ def _task_percent(task: dict):
     return _num(_first(task, "progressScore", "score"))
 
 
+def _posted_pct(task: dict):
+    """Percent for a *posted* task, where the mark the teacher entered is the truth.
+
+    The inverse preference of `_task_percent`: a Final Grade of "98" on a course
+    whose gradebook reads 2822/2900 (97.3) is 98, because 98 is what the teacher
+    posted and what lands on the report card. Points only fill in when the posted
+    mark isn't numeric.
+    """
+    score = _num(_first(task, "score", "progressScore"))
+    return score if score is not None else _task_percent(task)
+
+
 def _task_letter(task: dict):
     """The posted mark, but only when it isn't just the percent again."""
     raw = _first(task, "score", "progressScore")
@@ -110,14 +122,36 @@ def _task_letter(task: dict):
     return str(raw)
 
 
-def parse_grades(grades_json) -> dict[str, dict]:
-    """Grades -> {section_id: {grade_pct, grade_letter, term}}.
+# A course carries several grading tasks. Only two kinds describe the course
+# itself; the rest are standalone assessments that must never be mistaken for it.
+FINAL_TASK = "final grade"
+EXAM_TASKS = ("regents", "final exam", "mid-term exam", "midterm exam", "midterm",
+              "mid-term", "exam")
 
-    Terms are visited in sequence order and later ones overwrite earlier ones, so
-    what survives is the most recent term that actually has a grade — the number
-    the student cares about.
+
+def _task_kind(task: dict) -> str:
+    """'final' (the posted course grade), 'exam' (a standalone test), or 'term'."""
+    name = str(_first(task, "taskName", "name", default="")).strip().lower()
+    if name == FINAL_TASK or name.startswith("final grade"):
+        return "final"
+    if name in EXAM_TASKS:
+        return "exam"
+    return "term"
+
+
+def parse_grades(grades_json) -> dict[str, dict]:
+    """Grades -> {section_id: {grade_pct, grade_letter, term, final_pct, in_gpa, credits}}.
+
+    Task selection is explicit, not positional. A Biology course posts MP=100,
+    Regents=89 and Final Grade=98 in one term; taking whichever arrived last would
+    make the course grade the Regents score. Preference is the posted Final Grade,
+    then the most recent marking-period grade. Standalone exams are ignored.
+
+    `in_gpa` mirrors Campus's own `includedInTermGPA`, which is how Phys. Ed. and
+    lunch drop out. `credits` is the share of the year the course ran: a course
+    graded in 2 of 4 marking periods is a half-credit semester course.
     """
-    out: dict[str, dict] = {}
+    acc: dict[str, dict] = {}
     for enrollment in _as_list(grades_json):
         if not isinstance(enrollment, dict) or not enrollment.get("terms"):
             continue  # future-year enrollments arrive with terms: null
@@ -130,15 +164,45 @@ def parse_grades(grades_json) -> dict[str, dict]:
                 sid = _first(course, "sectionID", "sectionId")
                 if sid is None:
                     continue
+                e = acc.setdefault(str(sid), {"final": None, "term": None,
+                                              "in_gpa": False, "term_ids": set(),
+                                              "total_terms": len(terms)})
+                e["total_terms"] = max(e["total_terms"], len(terms))
                 for task in _as_list(course.get("gradingTasks")):
-                    pct = _task_percent(task) if isinstance(task, dict) else None
+                    if not isinstance(task, dict):
+                        continue
+                    if task.get("includedInTermGPA"):
+                        e["in_gpa"] = True
+                    kind = _task_kind(task)
+                    if kind == "exam":
+                        continue
+                    if kind == "term":
+                        e["term_ids"].add(_first(term, "termID", "termName"))
+                    # A posted final is the report-card number; a marking-period
+                    # grade is a live gradebook average, so points read truer there.
+                    pct = _posted_pct(task) if kind == "final" else _task_percent(task)
                     if pct is None:
                         continue
-                    out[str(sid)] = {
-                        "grade_pct": pct,
-                        "grade_letter": _task_letter(task),
-                        "term": _first(term, "termName") or _first(task, "termName"),
-                    }
+                    # Terms are visited in sequence, so the last write wins and the
+                    # most recent graded term survives.
+                    e[kind] = {"pct": pct, "letter": _task_letter(task),
+                               "term": _first(term, "termName") or _first(task, "termName")}
+
+    out: dict[str, dict] = {}
+    for sid, e in acc.items():
+        best = e["final"] or e["term"]
+        if best is None and not e["in_gpa"]:
+            continue
+        graded_terms = len([t for t in e["term_ids"] if t is not None])
+        out[sid] = {
+            "grade_pct": best["pct"] if best else None,
+            "grade_letter": best["letter"] if best else None,
+            "term": best["term"] if best else None,
+            "final_pct": e["final"]["pct"] if e["final"] else None,
+            "in_gpa": 1 if e["in_gpa"] else 0,
+            "credits": round(graded_terms / e["total_terms"], 2)
+                       if graded_terms and e["total_terms"] else None,
+        }
     return out
 
 

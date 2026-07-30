@@ -169,6 +169,39 @@ sentences plus one action for the week. Cached in `settings` under a key derived
 a hash of the ranking data, so it re-runs only when grades actually change.
 Button-triggered. No API key means the button reports "not configured".
 
+### GPA
+
+The portal publishes no GPA: every `transcript`, `gpa` and `reportCard` path 404s.
+So `pages/grades/gpa.py` derives one. That is the feature — when the school hides
+the number, the number is still here.
+
+District rules: numeric 0-100 course averages, Honors +2, AP +5, applied to the
+course average. A course counts only when Campus's own `includedInTermGPA` is set,
+which is how Phys. Ed., lunch and lab sections drop out on their own.
+
+Inputs come from each course's posted **Final Grade** task. Two rules make this
+correct, both learned from live data:
+
+- Task selection is by name, never by position. One term serves MP, Regents and
+  Final Grade together; taking the last one made a course grade the Regents score.
+  Standalone exams (Regents, Final Exam, Mid-Term) are never the course grade.
+- A posted final uses the **mark**, not the gradebook ratio. A course posting
+  `score: "98"` on a 2822/2900 gradebook is a 98 — that is what the report card
+  says. Marking-period grades keep using the points ratio, which is the live
+  average and ranks weak spots more finely.
+
+Credits are not published, so they are inferred: a course graded in 2 of 4 marking
+periods is a half-credit semester course. Because that inference could be wrong,
+four numbers are reported — weighted and unweighted, each equal-credit and
+credit-scaled — and the user enters the GPA from a report card. `gpa.compare()`
+ranks the four by distance from it; the closest is the district's model and a
+delta of zero means the local calculation is exact. Verified against the live
+year: unweighted 98.50, weighted 99.75, both under the equal-credit model.
+
+The GPA starts in 8th grade, which Campus will not serve (only the current and
+next enrollment come back). Those years are hand-entered into `gpa_courses` and
+never touched by sync.
+
 **Alerts strip.** Top of the page, derived on read, nothing stored:
 - assignments with `missing = 1`
 - scored zeros
@@ -178,9 +211,17 @@ Button-triggered. No API key means the button reports "not configured".
 
 | Route | Method | Purpose |
 |---|---|---|
-| `/grades` | GET | Page. Throttled sync, then render ranking + alerts |
+| `/grades` | GET | Page. Throttled sync, then render GPA + ranking + alerts |
 | `/api/grades/sync` | POST | Forced resync, returns fresh summary JSON |
 | `/api/grades/analysis` | POST | LLM readout, cached by ranking hash |
+| `/api/gpa` | GET | Recomputed GPA, the four models, the official number |
+| `/api/gpa/courses` | POST | Add a hand-entered year's course |
+| `/api/gpa/courses/<id>` | DELETE | Remove one |
+| `/api/gpa/official` | POST | Store the report-card GPA for the accuracy check |
+
+The page shows the GPA panel and Weakest courses. The category breakdowns
+("weakest kinds of classwork", "by course and category") are computed and fed to
+the LLM readout, but are no longer rendered — the page earns its width back.
 
 ### Navigation
 

@@ -128,6 +128,68 @@ def test_parse_courses_reads_period_from_section_placements():
     assert courses["303"]["period"] is None  # no placements, still a valid row
 
 
+def _named_task(task_name, score, earned=None, total=None, in_gpa=None):
+    return {"taskName": task_name, "taskID": 1, "termID": 808, "termName": "Q4",
+            "termSeq": 4, "score": score, "progressScore": score,
+            "includedInTermGPA": in_gpa,
+            "progressPointsEarned": earned, "progressTotalPoints": total}
+
+
+# A real Q4: the posted course grade sits alongside a Regents score and the
+# running marking-period grade.
+YEAR_END = [
+    {"enrollmentID": 2, "gradesEnabled": True, "terms": [
+        {"termID": 805, "termName": "Q1", "termSeq": 1, "courses": [
+            {"sectionID": 101, "courseName": "Biology H", "gradingTasks": [
+                _named_task("MP", "96", 2822.0, 2900.0, in_gpa=True)]},
+            {"sectionID": 404, "courseName": "Phys. Ed. 9", "gradingTasks": [
+                _named_task("MP", "100", 500.0, 500.0)]},
+            {"sectionID": 505, "courseName": "STEAM Comp Sci", "gradingTasks": [
+                _named_task("MP", "100", 100.0, 100.0, in_gpa=True)]},
+        ]},
+        {"termID": 806, "termName": "Q2", "termSeq": 2, "courses": [
+            {"sectionID": 101, "courseName": "Biology H", "gradingTasks": [
+                _named_task("MP", "99", 990.0, 1000.0, in_gpa=True)]},
+            {"sectionID": 505, "courseName": "STEAM Comp Sci", "gradingTasks": [
+                _named_task("MP", "100", 100.0, 100.0, in_gpa=True),
+                _named_task("Final Grade", "100", 100.0, 100.0)]},
+        ]},
+        {"termID": 807, "termName": "Q3", "termSeq": 3, "courses": [
+            {"sectionID": 101, "courseName": "Biology H", "gradingTasks": [
+                _named_task("MP", "100", 1000.0, 1000.0, in_gpa=True)]},
+        ]},
+        {"termID": 808, "termName": "Q4", "termSeq": 4, "courses": [
+            {"sectionID": 101, "courseName": "Biology H", "gradingTasks": [
+                _named_task("MP", "100", 1000.0, 1000.0, in_gpa=True),
+                _named_task("Regents", "89"),
+                _named_task("Final Grade", "98", 2822.0, 2900.0)]},
+            {"sectionID": 404, "courseName": "Phys. Ed. 9", "gradingTasks": [
+                _named_task("Final Grade", "100", 500.0, 500.0)]},
+        ]},
+    ]},
+]
+
+
+def test_posted_final_grade_beats_the_regents_and_the_marking_period():
+    g = campus.parse_grades(YEAR_END)["101"]
+    # 98 is posted; 89 is the Regents; 100 is Q4 marking period; 97.31 is the
+    # unrounded gradebook ratio. The report card says 98.
+    assert g["final_pct"] == pytest.approx(98.0)
+    assert g["grade_pct"] == pytest.approx(98.0)
+
+
+def test_courses_campus_excludes_from_gpa_stay_excluded():
+    g = campus.parse_grades(YEAR_END)
+    assert g["101"]["in_gpa"] == 1
+    assert g["404"]["in_gpa"] == 0     # Phys. Ed.: no includedInTermGPA anywhere
+
+
+def test_credits_track_the_share_of_the_year_a_course_ran():
+    g = campus.parse_grades(YEAR_END)
+    assert g["101"]["credits"] == pytest.approx(1.0)   # 4 of 4 marking periods
+    assert g["505"]["credits"] == pytest.approx(0.5)   # 2 of 4: a semester course
+
+
 def test_parse_grades_uses_points_not_the_posted_mark():
     grades = campus.parse_grades(GRADES)
     assert set(grades) == {"101", "202"}          # terms: null enrollment skipped

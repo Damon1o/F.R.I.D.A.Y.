@@ -1,9 +1,10 @@
 """Grades: /grades page (throttled sync on load) + forced sync and LLM readout APIs."""
 from datetime import datetime
 
-from flask import Blueprint, jsonify, render_template
+from flask import Blueprint, jsonify, render_template, request
 
-from pages.grades import models
+from pages.calendar.models import ValidationError
+from pages.grades import gpa, models
 
 grades_bp = Blueprint("grades", __name__)
 
@@ -30,6 +31,8 @@ def ago(ts: str | None) -> str | None:
 def grades_page():
     sync = models.sync()  # throttled to once per 2h; never raises
     state = models.status()
+    official = models.official_gpa()
+    result = gpa.compute()
     return render_template(
         "grades.html",
         configured=state["configured"],
@@ -37,6 +40,10 @@ def grades_page():
         sync_error=sync["error"] or state["error"],
         ranking=models.ranking(),
         alerts=models.alerts(),
+        gpa=result,
+        official_gpa=official,
+        gpa_models=gpa.compare(official, result),
+        levels=gpa.LEVELS,
     )
 
 
@@ -53,3 +60,38 @@ def grades_sync():
 def grades_analysis():
     result = models.analysis()
     return jsonify(result), (200 if result["text"] else 400)
+
+
+@grades_bp.route("/api/gpa", methods=["GET"])
+def gpa_get():
+    official = models.official_gpa()
+    result = gpa.compute()
+    return jsonify({"gpa": result, "official": official,
+                    "models": gpa.compare(official, result)})
+
+
+@grades_bp.route("/api/gpa/courses", methods=["POST"])
+def gpa_add_course():
+    body = request.get_json(silent=True) or {}
+    try:
+        return jsonify(gpa.add_manual(
+            body.get("year"), body.get("name"), body.get("final_pct"),
+            body.get("level", "regular"), body.get("credits", 1),
+        )), 201
+    except ValidationError as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@grades_bp.route("/api/gpa/courses/<int:row_id>", methods=["DELETE"])
+def gpa_delete_course(row_id):
+    return ("", 204) if gpa.delete_manual(row_id) else (jsonify({"error": "not found"}), 404)
+
+
+@grades_bp.route("/api/gpa/official", methods=["POST"])
+def gpa_set_official():
+    body = request.get_json(silent=True) or {}
+    try:
+        official = models.set_official_gpa(body.get("official"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "official must be a number"}), 400
+    return jsonify({"official": official, "models": gpa.compare(official)})

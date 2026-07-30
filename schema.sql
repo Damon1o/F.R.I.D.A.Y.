@@ -144,3 +144,25 @@ CREATE TABLE IF NOT EXISTS grade_history (
 
 CREATE INDEX IF NOT EXISTS assignments_section_idx   ON assignments   (section_id);
 CREATE INDEX IF NOT EXISTS grade_history_section_idx ON grade_history (section_id, recorded_at DESC);
+
+-- GPA. The portal exposes no GPA and no transcript endpoint, so it is computed
+-- locally from the posted Final Grade of each course. Level and credits are
+-- derived at sync time; in_gpa mirrors Campus's own includedInTermGPA flag.
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS final_pct REAL;
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS in_gpa    INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS credits   REAL;
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS level     TEXT;
+
+-- Years the portal cannot reach (the GPA starts in 8th grade, and Campus only
+-- serves the current and next enrollment). Hand-entered, never touched by sync.
+CREATE TABLE IF NOT EXISTS gpa_courses (
+    id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    year       TEXT NOT NULL,           -- "24-25", "Grade 8" — whatever the user calls it
+    name       TEXT NOT NULL,
+    final_pct  REAL NOT NULL,
+    level      TEXT NOT NULL DEFAULT 'regular',   -- regular | honors | ap
+    credits    REAL NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+);
+
+CREATE INDEX IF NOT EXISTS gpa_courses_year_idx ON gpa_courses (year, name);

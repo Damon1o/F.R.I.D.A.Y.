@@ -1705,3 +1705,36 @@ body {
 .alert-strip .rank-row { color: var(--on-surface); }
 .alert-strip .icon { flex: 0 0 auto; color: var(--on-surface-faint); }
 .icon.is-down { transform: scaleY(-1); color: var(--danger); }
+
+/* Grades: a card whose rows are a label, a short meter and a number. Full width
+   would be mostly empty. */
+.card-tight { max-width: 44rem; }
+.card-tight .rank-meter { flex: 0 0 clamp(80px, 30%, 200px); }
+
+.gpa-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-5);
+  padding: var(--s-2) var(--s-3) var(--s-4);
+}
+
+.gpa-figures .metric { display: flex; flex-direction: column; gap: 2px; }
+
+.gpa-check { padding: 0 var(--s-3) var(--s-4); border-top: 1px solid var(--hairline); }
+.gpa-check > .label-mono { display: block; padding: var(--s-4) 0 var(--s-2); }
+.gpa-check-row { display: flex; gap: var(--s-3); max-width: 26rem; }
+.gpa-check-row .field { flex: 1; }
+.rank-val.is-match { color: var(--on-surface); }
+
+.gpa-courses { border-top: 1px solid var(--hairline); padding-top: var(--s-3); }
+
+.gpa-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-3) var(--s-2);
+  border-top: 1px solid var(--hairline);
+}
+
+.gpa-add .field { flex: 1 1 8rem; min-width: 0; }
+.gpa-add .field[name='name'] { flex: 2 1 12rem; }

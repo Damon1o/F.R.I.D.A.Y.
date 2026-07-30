@@ -87,8 +87,85 @@
   <p class="subtle" id="analysis-text">Ask F.R.I.D.A.Y. what these numbers mean.</p>
 </section>
 
-{# ---- Weak-spot ranking (SQL only) ---- #}
-<section class="card">
+{# ---- GPA: computed locally, because the portal publishes none ---- #}
+<section class="card gpa-card">
+  <div class="card-head">
+    <h2>GPA</h2>
+    <span class="tag label-mono">{{ gpa.count }} courses · {{ gpa.credits }} credits</span>
+  </div>
+
+  {% if gpa.count %}
+  <div class="gpa-figures">
+    <div class="metric">
+      <span class="label-mono">Weighted</span>
+      <strong class="metric-val">{{ '%.2f' | format(gpa.weighted) }}</strong>
+      <span class="faint">{{ gpa.honors }} honors · {{ gpa.ap }} AP</span>
+    </div>
+    <div class="metric">
+      <span class="label-mono">Unweighted</span>
+      <strong class="metric-val">{{ '%.2f' | format(gpa.unweighted) }}</strong>
+      <span class="faint">no level bonus</span>
+    </div>
+  </div>
+
+  {# The portal publishes no credit hours, so both models are shown and the one
+     matching a report card is the district's. #}
+  <div class="gpa-check">
+    <label class="label-mono" for="official-gpa">Official GPA (from a report card)</label>
+    <div class="gpa-check-row">
+      <input class="field" type="number" step="0.01" id="official-gpa" placeholder="e.g. 98.50"
+        value="{{ official_gpa if official_gpa is not none else '' }}">
+      <button class="btn-ghost" id="official-save" type="button">Compare</button>
+    </div>
+    <ul class="rank-list" id="gpa-models">
+      {% for m in gpa_models %}
+      <li class="rank-row">
+        <span class="rank-name">{{ m.model }}</span>
+        <span class="rank-val">{{ '%.2f' | format(m.value) }}</span>
+        <span class="rank-val {{ 'is-match' if m.delta == 0 }}">
+          {%- if m.delta is none %}—{% elif m.delta == 0 %}exact{% else %}{{ '%+.2f' | format(m.delta) }}{% endif -%}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <ul class="rank-list gpa-courses">
+    {% for c in gpa.courses %}
+    <li class="rank-row">
+      <span class="rank-name">
+        {{ c.name }}
+        <em class="faint">{{ c.year }}{% if c.credits != 1 %} · {{ c.credits }} cr{% endif %}</em>
+      </span>
+      {% if c.bonus %}<span class="tag label-mono">{{ c.level }} +{{ '%.0f' | format(c.bonus) }}</span>{% endif %}
+      <span class="rank-val">{{ '%.0f' | format(c.final_pct) }}</span>
+      {% if c.source == 'manual' %}
+      <button class="icon-btn danger" data-gpa-delete="{{ c.id }}" aria-label="Remove">{{ icon('trash-2', 14) }}</button>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="subtle">No final grades yet. GPA appears once courses post a Final Grade.</p>
+  {% endif %}
+
+  {# 8th grade and any other year Campus won't serve: the portal only returns the
+     current and next enrollment. #}
+  <form class="gpa-add" id="gpa-add">
+    <input class="field" name="year" placeholder="Year (e.g. Grade 8)" required>
+    <input class="field" name="name" placeholder="Course" required>
+    <input class="field" name="final_pct" type="number" step="0.01" placeholder="Final" required>
+    <select class="field" name="level">
+      {% for lvl in levels %}<option value="{{ lvl }}">{{ lvl }}</option>{% endfor %}
+    </select>
+    <input class="field" name="credits" type="number" step="0.5" value="1" aria-label="Credits">
+    <button class="btn-ghost" type="submit">{{ icon('plus', 16) }}<span>Add year</span></button>
+  </form>
+</section>
+
+{# ---- Weak-spot ranking (SQL only). Narrow: the rows are a name, a short meter
+   and a number, so a full-width card is mostly empty. ---- #}
+<section class="card card-tight">
   <div class="card-head">
     <h2>Weakest courses</h2>
   </div>
@@ -109,41 +186,6 @@
     {% endfor %}
   </ul>
 </section>
-
-<section class="card">
-  <div class="card-head">
-    <h2>Weakest kinds of classwork</h2>
-  </div>
-  <ul class="rank-list">
-    {% for k in ranking.categories %}
-    <li class="rank-row">
-      <span class="rank-name">{{ k.category }} <em class="faint">{{ k.n }} scored</em></span>
-      <span class="rank-meter">
-        <span class="rank-fill" style="width: {{ '%.0f' | format(k.pct or 0) }}%"></span>
-      </span>
-      <span class="rank-val">{% if k.pct is not none %}{{ '%.1f' | format(k.pct) }}%{% else %}—{% endif %}</span>
-    </li>
-    {% else %}
-    <li class="empty">Nothing scored yet.</li>
-    {% endfor %}
-  </ul>
-</section>
-
-{% if ranking.by_course %}
-<section class="card">
-  <div class="card-head">
-    <h2>By course and category</h2>
-  </div>
-  <ul class="rank-list">
-    {% for r in ranking.by_course[:15] %}
-    <li class="rank-row">
-      <span class="rank-name">{{ r.course }} <em class="faint">{{ r.category }}</em></span>
-      <span class="rank-val">{% if r.pct is not none %}{{ '%.1f' | format(r.pct) }}%{% else %}—{% endif %}</span>
-    </li>
-    {% endfor %}
-  </ul>
-</section>
-{% endif %}
 
 {% endif %}
 {% endblock %}

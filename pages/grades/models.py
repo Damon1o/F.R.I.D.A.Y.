@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from core import campus
 from core.db import execute, query, rollback
+from pages.grades import gpa
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ SYNC_KEY = "campus_synced_at"
 ERROR_KEY = "campus_sync_error"
 DISTRICT_KEY = "campus_district"
 ANALYSIS_KEY = "campus_analysis"
+OFFICIAL_GPA_KEY = "gpa_official"
 
 THROTTLE = timedelta(hours=2)
 DROP_WINDOW = timedelta(days=14)
@@ -83,13 +85,17 @@ def _district(client_session=None) -> dict:
 
 def _upsert_course(c: dict, grade: dict) -> None:
     execute(
-        "INSERT INTO courses (section_id, name, teacher, period, term, grade_pct, grade_letter, synced_at) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
+        "INSERT INTO courses (section_id, name, teacher, period, term, grade_pct, grade_letter, "
+        "                     final_pct, in_gpa, credits, level, synced_at) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
         "ON CONFLICT (section_id) DO UPDATE SET name=excluded.name, teacher=excluded.teacher, "
         "period=excluded.period, term=excluded.term, grade_pct=excluded.grade_pct, "
-        "grade_letter=excluded.grade_letter, synced_at=excluded.synced_at",
+        "grade_letter=excluded.grade_letter, final_pct=excluded.final_pct, "
+        "in_gpa=excluded.in_gpa, credits=excluded.credits, level=excluded.level, "
+        "synced_at=excluded.synced_at",
         (c["section_id"], c["name"], c.get("teacher"), c.get("period"), c.get("term"),
-         grade.get("grade_pct"), grade.get("grade_letter"), _stamp()),
+         grade.get("grade_pct"), grade.get("grade_letter"), grade.get("final_pct"),
+         grade.get("in_gpa", 0), grade.get("credits"), gpa.detect_level(c["name"]), _stamp()),
     )
 
 
@@ -183,6 +189,24 @@ def sync(force: bool = False) -> dict:
         except Exception:
             rollback()
     return result
+
+
+def official_gpa() -> float | None:
+    """The GPA off a report card, if the user has entered one. Accuracy baseline."""
+    raw = _get(OFFICIAL_GPA_KEY)
+    try:
+        return float(raw) if raw else None
+    except ValueError:
+        return None
+
+
+def set_official_gpa(value) -> float | None:
+    if value in (None, ""):
+        _clear(OFFICIAL_GPA_KEY)
+        return None
+    official = float(value)
+    _set(OFFICIAL_GPA_KEY, str(official))
+    return official
 
 
 def status() -> dict:

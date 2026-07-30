@@ -24,6 +24,38 @@
     }
   });
 
+  // GPA: hand-entered years, and the official-number accuracy check.
+  document.getElementById('gpa-add')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const r = await fetch('/api/gpa/courses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        year: f.get('year'), name: f.get('name'),
+        final_pct: f.get('final_pct'), level: f.get('level'), credits: f.get('credits'),
+      }),
+    });
+    if (r.ok) location.reload();
+  });
+
+  document.querySelectorAll('[data-gpa-delete]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const r = await fetch(`/api/gpa/courses/${btn.dataset.gpaDelete}`, { method: 'DELETE' });
+      if (r.ok) location.reload();
+    });
+  });
+
+  document.getElementById('official-save')?.addEventListener('click', async () => {
+    const val = document.getElementById('official-gpa').value;
+    const r = await fetch('/api/gpa/official', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ official: val }),
+    });
+    if (r.ok) location.reload();
+  });
+
   analyze?.addEventListener('click', async () => {
     analyze.disabled = true;
     if (out) out.textContent = 'Thinking…';

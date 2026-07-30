@@ -26,7 +26,8 @@ def app():
         db.init_db()
         conn = db.get_db()
         conn.execute("TRUNCATE settings, events, todos, notes, messages, undo_log, "
-                     "courses, assignments, grade_history RESTART IDENTITY CASCADE")
+                     "courses, assignments, grade_history, gpa_courses "
+                     "RESTART IDENTITY CASCADE")
         conn.commit()
     return app
 
