@@ -144,6 +144,41 @@ def test_sync_throttles_and_failure_keeps_cached_data(ctx, campus_stub, monkeypa
     assert models.status()["error"] == "sign-in rejected"
 
 
+def test_sync_error_never_leaks_credentials(ctx, campus_stub, monkeypatch):
+    """A requests exception stringifies the URL; the password must not survive it."""
+    def leaky(self):
+        raise campus.requests.ConnectionError(
+            "HTTPSConnectionPool: /campus/verify.jsp?username=student&password=secret"
+        )
+
+    monkeypatch.setattr(FakeCampus, "login", leaky)
+    result = models.sync(force=True)
+    assert "secret" not in result["error"]
+    assert "student" not in result["error"]
+    assert "[redacted]" in result["error"]
+    assert "secret" not in models.status()["error"]
+
+
+def test_login_sends_credentials_in_the_body_not_the_url():
+    sent = {}
+
+    class Recorder:
+        def post(self, url, data=None, timeout=None):
+            sent.update(url=url, data=data)
+
+            class R:
+                text = "success"
+
+                def raise_for_status(self):
+                    pass
+            return R()
+
+    campus.Campus("https://x.infinitecampus.org/campus/", "app", "student", "secret",
+                  session=Recorder()).login()
+    assert "secret" not in sent["url"]
+    assert sent["data"]["password"] == "secret"
+
+
 def test_sync_reports_unconfigured(ctx, monkeypatch):
     for k in ("CAMPUS_DISTRICT", "CAMPUS_STATE", "CAMPUS_USER", "CAMPUS_PASS"):
         monkeypatch.delenv(k, raising=False)

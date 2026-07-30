@@ -193,11 +193,16 @@ class Campus:
             raise CampusError(f"GET {path} returned non-JSON (session expired?)")
 
     def login(self) -> None:
-        """Authenticate; the session cookie is retained on `self.session`."""
+        """Authenticate; the session cookie is retained on `self.session`.
+
+        POST, not GET: a requests exception stringifies the whole URL, and that
+        string is stored and rendered as the sync status. Credentials in the body
+        stay out of it — and out of the district's access log.
+        """
         try:
-            resp = self.session.get(
+            resp = self.session.post(
                 self.base + "verify.jsp",
-                params={
+                data={
                     "nonBrowser": "true",
                     "username": self.username,
                     "password": self.password,
@@ -207,7 +212,8 @@ class Campus:
             )
             resp.raise_for_status()
         except requests.RequestException as e:
-            raise CampusError(f"sign-in request failed: {e}")
+            # Exception type only. Never the message: it can carry request detail.
+            raise CampusError(f"sign-in request failed ({e.__class__.__name__})")
         # verify.jsp answers 200 either way; the body carries the verdict.
         if "success" not in resp.text.lower():
             raise CampusError("sign-in rejected")
@@ -220,6 +226,21 @@ class Campus:
 
     def assignments(self, section_id: str):
         return self._get(f"resources/portal/assignment/section/{section_id}")
+
+
+def redact(text: str) -> str:
+    """Strip credential values out of a message before it is stored or displayed.
+
+    Belt to login()'s braces: any future code path that stringifies a request
+    still can't leak the password into the sync status line.
+    """
+    creds = credentials()
+    if not creds:
+        return text
+    for secret in (creds["password"], creds["user"]):
+        if secret:
+            text = text.replace(secret, "[redacted]")
+    return text
 
 
 def credentials() -> dict | None:

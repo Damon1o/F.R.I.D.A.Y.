@@ -163,7 +163,8 @@ def sync(force: bool = False) -> dict:
         result["ran"] = True
     except Exception as e:  # network, auth, or a shape the parsers couldn't read
         rollback()  # Postgres refuses later statements on a poisoned transaction
-        msg = str(e) or e.__class__.__name__
+        # Redacted before it is logged, stored, or rendered as the status line.
+        msg = campus.redact(str(e) or e.__class__.__name__)
         log.warning("Campus sync failed: %s", msg)
         result["error"] = msg
         try:
