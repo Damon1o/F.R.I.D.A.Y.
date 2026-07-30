@@ -1653,3 +1653,55 @@ body {
 @media (max-width: 860px) {
   .app-shell:not(.rail-collapsed) .rail-scrim { display: block; }
 }
+
+/* ---------- Educational: nav group + grades ranking ---------- */
+.nav-group { margin-top: var(--s-4); }
+
+.nav-group-label {
+  padding: 0 var(--s-3) var(--s-2);
+  color: var(--on-surface-faint);
+}
+
+.rail.is-collapsed .nav-group-label { display: none; }
+.rail.is-collapsed.is-hovering .nav-group-label { display: block; }
+
+.head-actions { display: flex; align-items: center; gap: var(--s-3); }
+
+.rank-list { display: flex; flex-direction: column; gap: 2px; }
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 10px var(--s-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: var(--text-body-sm);
+}
+
+.rank-row:hover { background: var(--glass-hover); border-color: var(--hairline); }
+.rank-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-name em { font-style: normal; margin-left: var(--s-2); }
+
+/* The meter reads as "how much of the course you're holding onto", so a short
+   bar is the weak one — same direction as the ascending sort. */
+.rank-meter {
+  flex: 0 0 clamp(60px, 22%, 160px);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-container-high);
+  overflow: hidden;
+}
+
+.rank-fill { display: block; height: 100%; background: var(--primary); }
+
+.rank-val {
+  flex: 0 0 auto;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--on-surface-variant);
+}
+
+.alert-strip .rank-row { color: var(--on-surface); }
+.alert-strip .icon { flex: 0 0 auto; color: var(--on-surface-faint); }
+.icon.is-down { transform: scaleY(-1); color: var(--danger); }

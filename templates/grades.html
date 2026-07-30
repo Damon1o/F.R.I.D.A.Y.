@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block title %}Grades · F.R.I.D.A.Y.{% endblock %}
+{% block topbar %}Grades{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="display">Grades</h1>
+    <p class="subtle">Where the points are going, and where they are leaking.</p>
+  </div>
+  <div class="head-actions">
+    <span class="tag label-mono" id="sync-status">
+      {%- if not configured -%}Not configured
+      {%- elif sync_error -%}Sync failed
+      {%- elif synced_ago -%}Synced {{ synced_ago }}
+      {%- else -%}Never synced{%- endif -%}
+    </span>
+    <button class="btn-ghost" id="grades-refresh" type="button" {{ 'disabled' if not configured }}>
+      {{ icon('rotate-ccw', 16) }}<span>Refresh</span>
+    </button>
+  </div>
+</section>
+
+{% if not configured %}
+<section class="card">
+  <div class="card-head">
+    <h2>Connect Infinite Campus</h2>
+  </div>
+  <p class="subtle">Set these four environment variables, then reload:</p>
+  <ul class="rank-list">
+    <li class="rank-row"><span class="rank-name">CAMPUS_DISTRICT</span><span class="rank-val">district name</span></li>
+    <li class="rank-row"><span class="rank-name">CAMPUS_STATE</span><span class="rank-val">two-letter state</span></li>
+    <li class="rank-row"><span class="rank-name">CAMPUS_USER</span><span class="rank-val">portal username</span></li>
+    <li class="rank-row"><span class="rank-name">CAMPUS_PASS</span><span class="rank-val">portal password</span></li>
+  </ul>
+</section>
+{% else %}
+
+{% if sync_error %}
+<section class="card">
+  <p class="faint">Showing the last data F.R.I.D.A.Y. pulled. Sync failed: {{ sync_error }}</p>
+</section>
+{% endif %}
+
+{# ---- Alerts: derived on read, nothing stored ---- #}
+{% set has_alerts = alerts.missing or alerts.zeros or alerts.drops %}
+{% if has_alerts %}
+<section class="card alert-strip">
+  <div class="card-head">
+    <h2>Needs attention</h2>
+    <span class="tag label-mono">{{ alerts.missing | length + alerts.zeros | length + alerts.drops | length }}</span>
+  </div>
+  <ul class="rank-list">
+    {% for d in alerts.drops %}
+    <li class="rank-row">
+      {{ icon('trending-up', 16, 'is-down') }}
+      <span class="rank-name">{{ d.course or d.section_id }} dropped {{ '%.1f' | format(d.drop_pts) }} points</span>
+      <span class="rank-val">{{ '%.1f' | format(d.was) }} to {{ '%.1f' | format(d.now_pct) }}</span>
+    </li>
+    {% endfor %}
+    {% for a in alerts.missing %}
+    <li class="rank-row">
+      {{ icon('bell', 16) }}
+      <span class="rank-name">Missing: {{ a.name }}</span>
+      <span class="rank-val">{{ a.course or '' }}</span>
+    </li>
+    {% endfor %}
+    {% for a in alerts.zeros %}
+    <li class="rank-row">
+      {{ icon('circle', 16) }}
+      <span class="rank-name">Scored zero: {{ a.name }}</span>
+      <span class="rank-val">{{ a.course or '' }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{# ---- FRIDAY readout (LLM, button-triggered, cached by ranking hash) ---- #}
+<section class="card">
+  <div class="card-head">
+    <h2>F.R.I.D.A.Y.'s read</h2>
+    <button class="btn-primary" id="analysis-run" type="button">
+      {{ icon('zap', 16) }}<span>Analyze</span>
+    </button>
+  </div>
+  <p class="subtle" id="analysis-text">Ask F.R.I.D.A.Y. what these numbers mean.</p>
+</section>
+
+{# ---- Weak-spot ranking (SQL only) ---- #}
+<section class="card">
+  <div class="card-head">
+    <h2>Weakest courses</h2>
+  </div>
+  <ul class="rank-list">
+    {% for c in ranking.courses %}
+    <li class="rank-row">
+      <span class="rank-name">{{ c.name }}{% if c.teacher %} <em class="faint">{{ c.teacher }}</em>{% endif %}</span>
+      <span class="rank-meter">
+        <span class="rank-fill" style="width: {{ '%.0f' | format(c.grade_pct or 0) }}%"></span>
+      </span>
+      <span class="rank-val">
+        {% if c.grade_pct is not none %}{{ '%.1f' | format(c.grade_pct) }}%{% else %}—{% endif %}
+        {%- if c.grade_letter %} {{ c.grade_letter }}{% endif %}
+      </span>
+    </li>
+    {% else %}
+    <li class="empty">No courses synced yet. Hit Refresh.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Weakest kinds of classwork</h2>
+  </div>
+  <ul class="rank-list">
+    {% for k in ranking.categories %}
+    <li class="rank-row">
+      <span class="rank-name">{{ k.category }} <em class="faint">{{ k.n }} scored</em></span>
+      <span class="rank-meter">
+        <span class="rank-fill" style="width: {{ '%.0f' | format(k.pct or 0) }}%"></span>
+      </span>
+      <span class="rank-val">{% if k.pct is not none %}{{ '%.1f' | format(k.pct) }}%{% else %}—{% endif %}</span>
+    </li>
+    {% else %}
+    <li class="empty">Nothing scored yet.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% if ranking.by_course %}
+<section class="card">
+  <div class="card-head">
+    <h2>By course and category</h2>
+  </div>
+  <ul class="rank-list">
+    {% for r in ranking.by_course[:15] %}
+    <li class="rank-row">
+      <span class="rank-name">{{ r.course }} <em class="faint">{{ r.category }}</em></span>
+      <span class="rank-val">{% if r.pct is not none %}{{ '%.1f' | format(r.pct) }}%{% else %}—{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/grades.js') }}"></script>
+{% endblock %}

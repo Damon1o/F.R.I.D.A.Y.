@@ -1,7 +1,8 @@
 # Infinite Campus grades — design
 
 Date: 2026-07-29
-Status: approved, not implemented
+Status: implemented (2026-07-29). Portal endpoint paths still need verification
+against the live district — see Constraints.
 
 ## Purpose
 

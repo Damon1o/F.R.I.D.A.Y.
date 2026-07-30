@@ -51,8 +51,23 @@
       ('music.music_page', 'music', 'Music'),
       ] %}
 
+      {% set edu_items = [
+      ('grades.grades_page', 'graduation-cap', 'Grades'),
+      ('sat.sat_page', 'book-open-check', 'SAT Prep'),
+      ] %}
+
       <nav class="nav" aria-label="Sections">
         {% for endpoint, ico, label in nav_items %}
+        <a class="nav-link {{ 'is-active' if page == endpoint }}" href="{{ url_for(endpoint) }}" {{ 'aria-current=page'
+          if page==endpoint }}>
+          {{ icon(ico, 20) }}<span>{{ label }}</span>
+        </a>
+        {% endfor %}
+      </nav>
+
+      <nav class="nav nav-group" aria-label="Educational">
+        <p class="nav-group-label label-mono">Educational</p>
+        {% for endpoint, ico, label in edu_items %}
         <a class="nav-link {{ 'is-active' if page == endpoint }}" href="{{ url_for(endpoint) }}" {{ 'aria-current=page'
           if page==endpoint }}>
           {{ icon(ico, 20) }}<span>{{ label }}</span>

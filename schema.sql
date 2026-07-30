@@ -102,3 +102,45 @@ CREATE INDEX IF NOT EXISTS messages_id_idx      ON messages (id DESC);
 -- instead of deleting history. Existing rows collapse into thread 1.
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS thread_id BIGINT NOT NULL DEFAULT 1;
 CREATE INDEX IF NOT EXISTS messages_thread_idx ON messages (thread_id, id DESC);
+
+-- ============================================================================
+-- Infinite Campus grades (Spec: docs/superpowers/specs/2026-07-29-infinite-campus-grades-design.md)
+-- Read-only mirror of the student's own portal data. Sync upserts on the Campus
+-- IDs, so re-running it is idempotent.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS courses (
+    id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    section_id   TEXT UNIQUE NOT NULL,   -- Campus sectionID: the sync key
+    name         TEXT NOT NULL,
+    teacher      TEXT,
+    period       TEXT,
+    term         TEXT,
+    grade_pct    REAL,
+    grade_letter TEXT,
+    synced_at    TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+);
+
+CREATE TABLE IF NOT EXISTS assignments (
+    id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    campus_id  TEXT UNIQUE NOT NULL,
+    section_id TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    category   TEXT,                   -- Homework / Test / Project — powers category ranking
+    points     REAL,
+    total      REAL,
+    due_at     TEXT,
+    missing    INTEGER NOT NULL DEFAULT 0,
+    synced_at  TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+);
+
+-- One row per *change* in a course percent, not one per sync. That is what makes
+-- drop detection work without a cron job.
+CREATE TABLE IF NOT EXISTS grade_history (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    section_id  TEXT NOT NULL,
+    grade_pct   REAL,
+    recorded_at TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+);
+
+CREATE INDEX IF NOT EXISTS assignments_section_idx   ON assignments   (section_id);
+CREATE INDEX IF NOT EXISTS grade_history_section_idx ON grade_history (section_id, recorded_at DESC);
