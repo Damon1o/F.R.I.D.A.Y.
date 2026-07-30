@@ -59,7 +59,15 @@ def _clear(key: str) -> None:
 # --------------------------------------------------------------------------- #
 
 def _district(client_session=None) -> dict:
-    """Resolved district base URL + app name, looked up once and cached."""
+    """Resolved district base URL + app name, looked up once and cached.
+
+    CAMPUS_BASE / CAMPUS_APP short-circuit the whole thing. Prefer them: the
+    district-search service they replace answers 504 for long stretches.
+    """
+    creds = campus.credentials()
+    if creds["base"] and creds["app_name"]:
+        return {"base": creds["base"], "app_name": creds["app_name"]}
+
     cached = _get(DISTRICT_KEY)
     if cached:
         try:
@@ -68,7 +76,6 @@ def _district(client_session=None) -> dict:
                 return d
         except ValueError:
             pass  # corrupt cache: fall through and re-resolve
-    creds = campus.credentials()
     d = campus.search_district(creds["district"], creds["state"], session=client_session)
     _set(DISTRICT_KEY, json.dumps(d))
     return d
@@ -150,8 +157,12 @@ def sync(force: bool = False) -> dict:
 
         for c in courses:
             grade = grades.get(c["section_id"], {})
+            if grade.get("term"):
+                c["term"] = grade["term"]  # the graded term beats the roster placement
             _upsert_course(c, grade)
             _record_history(c["section_id"], grade.get("grade_pct"))
+            if not grade:
+                continue  # no grade for this section means no grade detail to fetch
             for a in campus.parse_assignments(client.assignments(c["section_id"]), c["section_id"]):
                 _upsert_assignment(a)
                 result["assignments"] += 1
@@ -190,7 +201,9 @@ def status() -> dict:
 def weakest_courses() -> list[dict]:
     return [dict(r) for r in query(
         "SELECT c.section_id, c.name, c.teacher, c.grade_pct, c.grade_letter, "
-        "       COALESCE(SUM(a.total - a.points), 0) AS points_lost "
+        # GREATEST: extra credit scores above the total, and a course full of it
+        # would otherwise report negative points lost.
+        "       COALESCE(SUM(GREATEST(a.total - a.points, 0)), 0) AS points_lost "
         "FROM courses c "
         "LEFT JOIN assignments a ON a.section_id = c.section_id "
         "     AND a.points IS NOT NULL AND a.total IS NOT NULL "

@@ -8,36 +8,76 @@ from core.db import execute, query
 from pages.grades import models
 
 # --------------------------------------------------------------------------- #
-# Recorded-shape fixtures (nested the way the portal nests them)
+# Fixtures trimmed from real portal responses — same nesting, same field names.
 # --------------------------------------------------------------------------- #
 
 ROSTER = [
-    {"sectionID": 101, "courseName": "AP Calculus", "teacherDisplay": "Smith, J",
-     "periodName": "3", "termName": "S1"},
-    {"sectionID": 202, "courseName": "US History", "teacherDisplay": "Doe, A",
-     "periodName": "5", "termName": "S1"},
+    {"sectionID": 101, "courseName": "AP Calculus", "courseNumber": "MA300",
+     "teacherDisplay": "Smith, J", "roomName": "124",
+     "sectionPlacements": [{"sectionID": 101, "termName": "Q1", "termSeq": 1,
+                            "periodName": "3", "teacherDisplay": "Smith, J"}]},
+    {"sectionID": 202, "courseName": "US History", "courseNumber": "SS210",
+     "teacherDisplay": "Doe, A", "roomName": "310",
+     "sectionPlacements": [{"sectionID": 202, "termName": "Q1", "termSeq": 1,
+                            "periodName": "5", "teacherDisplay": "Doe, A"}]},
+    # A section the grades payload never mentions: no grade, no detail fetch.
+    {"sectionID": 303, "courseName": "Study Hall", "teacherDisplay": "Roe, B",
+     "sectionPlacements": []},
 ]
 
+
+def _task(pct_earned, pct_total, score):
+    return {"taskName": "MP", "taskID": 1, "termID": 805, "termName": "Q1", "termSeq": 1,
+            "hasAssignments": True, "includedInTermGPA": True, "usePercent": False,
+            "score": score, "progressScore": score,
+            "progressPointsEarned": pct_earned, "progressTotalPoints": pct_total}
+
+
+# One future-year enrollment with terms: null (must be skipped) and one live one.
 GRADES = [
-    {"sectionID": 101, "terms": [{"gradingTasks": [
-        {"taskName": "Term Grade", "progressPercent": 72.5, "progressScore": "C-"}]}]},
-    {"sectionID": 202, "terms": [{"gradingTasks": [
-        {"taskName": "Term Grade", "progressPercent": 94.0, "progressScore": "A"}]}]},
+    {"enrollmentID": 1, "displayName": "26-27 High School", "gradesEnabled": False,
+     "terms": None},
+    {"enrollmentID": 2, "displayName": "25-26 High School", "gradesEnabled": True,
+     "terms": [
+         {"termID": 805, "termName": "Q1", "termSeq": 1, "courses": [
+             {"sectionID": 101, "courseName": "AP Calculus", "dropped": False,
+              "gradingTasks": [_task(29.0, 40.0, "72")]},
+             {"sectionID": 202, "courseName": "US History", "dropped": False,
+              "gradingTasks": [_task(47.0, 50.0, "94")]},
+         ]},
+     ]},
 ]
 
-ASSIGNMENTS = {
-    "101": [
-        {"objectSectionID": 1, "assignmentName": "Limits quiz", "groupName": "Test",
-         "scorePoints": 12, "totalPoints": 20, "dueDate": "2026-07-10", "missing": False},
-        {"objectSectionID": 2, "assignmentName": "Derivatives set", "groupName": "Homework",
-         "scorePoints": 9, "totalPoints": 10, "dueDate": "2026-07-12", "missing": False},
-        {"objectSectionID": 3, "assignmentName": "Chain rule set", "groupName": "Homework",
-         "scorePoints": None, "totalPoints": 10, "dueDate": "2026-07-20", "missing": True},
-    ],
-    "202": [
-        {"objectSectionID": 4, "assignmentName": "Essay 1", "groupName": "Project",
-         "scorePoints": 0, "totalPoints": 50, "dueDate": "2026-07-14", "missing": False},
-    ],
+
+def _assignment(oid, name, points, total, due, missing=False):
+    return {"objectSectionID": oid, "assignmentName": name, "sectionID": 101,
+            "taskID": 1, "termIDs": [805], "dueDate": due + "T03:59:00.000Z",
+            "assignedDate": due + "T04:00:00.000Z", "scoringType": "p",
+            "score": points, "scorePoints": points, "scorePercentage": None,
+            "totalPoints": total, "active": True, "dropped": False,
+            "missing": missing, "late": False, "notGraded": False}
+
+
+# resources/portal/grades/detail/<sectionID>: details[] -> categories[] -> assignments[]
+DETAIL = {
+    "101": {"terms": [{"termID": 805, "termName": "Q1"}], "details": [
+        {"task": {"taskName": "MP", "termID": 805, "sectionID": 948206},
+         "categories": [
+             {"groupID": 1, "name": "Test", "weight": 60.0, "assignments": [
+                 _assignment(1, "Limits quiz", "12.0", 20, "2026-07-10")]},
+             {"groupID": 2, "name": "Homework", "weight": 20.0, "assignments": [
+                 _assignment(2, "Derivatives set", "9.0", 10, "2026-07-12"),
+                 _assignment(3, "Chain rule set", None, 10, "2026-07-20", missing=True),
+                 # Dropped rows must not reach the database.
+                 dict(_assignment(9, "Voided worksheet", "0", 10, "2026-07-01"),
+                      dropped=True)]},
+         ]}]},
+    "202": {"terms": [{"termID": 805, "termName": "Q1"}], "details": [
+        {"task": {"taskName": "MP", "termID": 805},
+         "categories": [
+             {"groupID": 3, "name": "Project", "assignments": [
+                 _assignment(4, "Essay 1", "0", 50, "2026-07-14")]},
+         ]}]},
 }
 
 
@@ -57,7 +97,7 @@ class FakeCampus:
         return GRADES
 
     def assignments(self, section_id):
-        return ASSIGNMENTS.get(str(section_id), [])
+        return DETAIL.get(str(section_id), {})
 
 
 @pytest.fixture
@@ -65,6 +105,9 @@ def campus_stub(monkeypatch):
     for k, v in (("CAMPUS_DISTRICT", "Testville"), ("CAMPUS_STATE", "NY"),
                  ("CAMPUS_USER", "student"), ("CAMPUS_PASS", "secret")):
         monkeypatch.setenv(k, v)
+    # Independent of the developer's own .env: tests own the whole config.
+    for k in ("CAMPUS_BASE", "CAMPUS_APP"):
+        monkeypatch.delenv(k, raising=False)
     monkeypatch.setattr(campus, "search_district",
                         lambda *a, **k: {"base": "https://x.infinitecampus.org/campus/",
                                          "app_name": "testville"})
@@ -75,20 +118,51 @@ def campus_stub(monkeypatch):
 # 1. Client parsing
 # --------------------------------------------------------------------------- #
 
-def test_parsers_read_nested_fixtures():
-    courses = campus.parse_courses(ROSTER)
-    assert {c["section_id"] for c in courses} == {"101", "202"}
-    assert courses[0]["name"] == "AP Calculus"
-    assert courses[0]["teacher"] == "Smith, J"
+def test_parse_courses_reads_period_from_section_placements():
+    courses = {c["section_id"]: c for c in campus.parse_courses(ROSTER)}
+    assert set(courses) == {"101", "202", "303"}
+    assert courses["101"]["name"] == "AP Calculus"
+    assert courses["101"]["teacher"] == "Smith, J"
+    assert courses["101"]["period"] == "3"
+    assert courses["101"]["term"] == "Q1"
+    assert courses["303"]["period"] is None  # no placements, still a valid row
 
+
+def test_parse_grades_uses_points_not_the_posted_mark():
     grades = campus.parse_grades(GRADES)
-    assert grades["101"] == {"grade_pct": 72.5, "grade_letter": "C-"}
+    assert set(grades) == {"101", "202"}          # terms: null enrollment skipped
+    assert grades["101"]["grade_pct"] == pytest.approx(72.5)   # 29/40, not score "72"
+    assert grades["101"]["grade_letter"] is None   # numeric mark isn't a letter
+    assert grades["101"]["term"] == "Q1"
 
-    rows = campus.parse_assignments(ASSIGNMENTS["101"], "101")
-    assert len(rows) == 3
+
+def test_parse_grades_keeps_the_letter_on_a_letter_scale():
+    letter = json.loads(json.dumps(GRADES))
+    task = letter[1]["terms"][0]["courses"][0]["gradingTasks"][0]
+    task["score"] = task["progressScore"] = "C-"
+    assert campus.parse_grades(letter)["101"]["grade_letter"] == "C-"
+
+
+def test_parse_grades_prefers_the_latest_graded_term():
+    two_terms = json.loads(json.dumps(GRADES))
+    q2 = json.loads(json.dumps(two_terms[1]["terms"][0]))
+    q2.update(termID=806, termName="Q2", termSeq=2)
+    q2["courses"] = [q2["courses"][0]]
+    q2["courses"][0]["gradingTasks"] = [_task(30.0, 50.0, "60")]
+    two_terms[1]["terms"].append(q2)
+    grades = campus.parse_grades(two_terms)
+    assert grades["101"]["grade_pct"] == pytest.approx(60.0)
+    assert grades["101"]["term"] == "Q2"
+
+
+def test_parse_assignments_takes_the_category_from_its_parent():
+    rows = campus.parse_assignments(DETAIL["101"], "101")
     by_name = {r["name"]: r for r in rows}
+    assert set(by_name) == {"Limits quiz", "Derivatives set", "Chain rule set"}
     assert by_name["Limits quiz"]["category"] == "Test"
     assert by_name["Limits quiz"]["points"] == 12
+    assert by_name["Limits quiz"]["due_at"] == "2026-07-10"   # date, not ISO instant
+    assert by_name["Derivatives set"]["category"] == "Homework"
     assert by_name["Chain rule set"]["missing"] == 1
     assert by_name["Chain rule set"]["points"] is None
 
@@ -106,11 +180,12 @@ def test_credentials_absent_is_not_an_error(monkeypatch):
 def test_sync_is_idempotent(ctx, campus_stub):
     first = models.sync(force=True)
     assert first["error"] is None
-    assert first["courses"] == 2
+    assert first["courses"] == 3
     models.sync(force=True)  # same fixture, second time
 
-    assert query("SELECT count(*) AS n FROM courses", one=True)["n"] == 2
+    assert query("SELECT count(*) AS n FROM courses", one=True)["n"] == 3
     assert query("SELECT count(*) AS n FROM assignments", one=True)["n"] == 4
+    # Study Hall has no grade, so no history row and no detail fetch.
     assert query("SELECT count(*) AS n FROM grade_history", one=True)["n"] == 2
 
 
@@ -119,9 +194,8 @@ def test_history_row_only_on_change(ctx, campus_stub, monkeypatch):
     assert query("SELECT count(*) AS n FROM grade_history WHERE section_id = '101'",
                  one=True)["n"] == 1
 
-    monkeypatch.setitem(ASSIGNMENTS, "101", ASSIGNMENTS["101"])  # unchanged
     bumped = json.loads(json.dumps(GRADES))
-    bumped[0]["terms"][0]["gradingTasks"][0]["progressPercent"] = 68.0
+    bumped[1]["terms"][0]["courses"][0]["gradingTasks"][0]["progressPointsEarned"] = 27.2
     monkeypatch.setattr(FakeCampus, "grades", lambda self: bumped)
     models.sync(force=True)
 
@@ -140,7 +214,7 @@ def test_sync_throttles_and_failure_keeps_cached_data(ctx, campus_stub, monkeypa
     monkeypatch.setattr(FakeCampus, "login", boom)
     result = models.sync(force=True)
     assert result["error"] == "sign-in rejected"
-    assert query("SELECT count(*) AS n FROM courses", one=True)["n"] == 2
+    assert query("SELECT count(*) AS n FROM courses", one=True)["n"] == 3
     assert models.status()["error"] == "sign-in rejected"
 
 
@@ -180,9 +254,32 @@ def test_login_sends_credentials_in_the_body_not_the_url():
 
 
 def test_sync_reports_unconfigured(ctx, monkeypatch):
-    for k in ("CAMPUS_DISTRICT", "CAMPUS_STATE", "CAMPUS_USER", "CAMPUS_PASS"):
+    for k in ("CAMPUS_DISTRICT", "CAMPUS_STATE", "CAMPUS_USER", "CAMPUS_PASS",
+              "CAMPUS_BASE", "CAMPUS_APP"):
         monkeypatch.delenv(k, raising=False)
     assert models.sync(force=True)["configured"] is False
+
+
+def test_explicit_base_skips_the_district_search_service(ctx, campus_stub, monkeypatch):
+    """searchDistrict answers 504 for long stretches; CAMPUS_BASE must bypass it."""
+    def never(*_a, **_k):
+        raise AssertionError("search_district was called despite CAMPUS_BASE")
+
+    monkeypatch.setattr(campus, "search_district", never)
+    monkeypatch.setenv("CAMPUS_BASE", "https://x.infinitecampus.org/campus/")
+    monkeypatch.setenv("CAMPUS_APP", "testville")
+    assert models.sync(force=True)["error"] is None
+
+
+def test_district_search_is_used_when_base_is_absent(ctx, campus_stub, monkeypatch):
+    monkeypatch.delenv("CAMPUS_BASE", raising=False)
+    monkeypatch.delenv("CAMPUS_APP", raising=False)
+    calls = []
+    monkeypatch.setattr(campus, "search_district",
+                        lambda *a, **k: calls.append(a) or
+                        {"base": "https://x.infinitecampus.org/campus/", "app_name": "t"})
+    assert models.sync(force=True)["error"] is None
+    assert len(calls) == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -199,6 +296,13 @@ def test_ranking_puts_the_weakest_first(ctx, campus_stub):
     # Project is 0/50; Test is 12/20 (60%); Homework is 9/10 (90%).
     assert [k["category"] for k in r["categories"]] == ["Project", "Test", "Homework"]
     assert r["categories"][1]["pct"] == pytest.approx(60.0)
+
+
+def test_extra_credit_never_reports_negative_points_lost(ctx, campus_stub):
+    models.sync(force=True)
+    execute("UPDATE assignments SET points = 25, total = 20 WHERE name = 'Limits quiz'")
+    calc = next(c for c in models.weakest_courses() if c["name"] == "AP Calculus")
+    assert calc["points_lost"] == pytest.approx(1.0)  # the homework point, not -4
 
 
 # --------------------------------------------------------------------------- #
@@ -287,7 +391,8 @@ def test_nav_has_both_educational_links(client):
 
 
 def test_pages_render_without_campus_configured(client, monkeypatch):
-    for k in ("CAMPUS_DISTRICT", "CAMPUS_STATE", "CAMPUS_USER", "CAMPUS_PASS"):
+    for k in ("CAMPUS_DISTRICT", "CAMPUS_STATE", "CAMPUS_USER", "CAMPUS_PASS",
+              "CAMPUS_BASE", "CAMPUS_APP"):
         monkeypatch.delenv(k, raising=False)
     grades = client.get("/grades")
     assert grades.status_code == 200

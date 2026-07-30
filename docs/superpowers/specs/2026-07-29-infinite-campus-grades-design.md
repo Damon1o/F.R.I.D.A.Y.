@@ -1,8 +1,8 @@
 # Infinite Campus grades — design
 
 Date: 2026-07-29
-Status: implemented (2026-07-29). Portal endpoint paths still need verification
-against the live district — see Constraints.
+Status: implemented and verified against the live portal (2026-07-29):
+12 courses, 406 assignments synced.
 
 ## Purpose
 
@@ -20,8 +20,11 @@ student's district credentials. Consequences accepted up front:
 
 - Credentials are stored as environment variables.
 - The endpoints are versioned by district and undocumented. A district upgrade can
-  break the client. Exact paths are verified against the live district during
-  implementation, not assumed from this document.
+  break the client. The paths below were verified live against Bellmore-Merrick
+  (Campus 2025-26) during implementation.
+- `mobile.infinitecampus.com/api/district/searchDistrict` — the service that maps a
+  district name to its portal URL — answers 504 for long stretches. `CAMPUS_BASE`
+  and `CAMPUS_APP` address the portal directly and skip it. Set them.
 - The app runs on Vercel serverless. Some districts block datacenter IP ranges. If
   the live pull 403s from Vercel, the fallback is a local sync script on the user's
   PC that POSTs to the app's API — a change of transport only, not of schema or UI.
@@ -58,13 +61,36 @@ schema.sql              courses, assignments, grade_history
 No Flask imports, so it is unit-testable against recorded JSON fixtures with no
 network.
 
-- `district(name, state)` — `GET mobile.infinitecampus.com/api/district/searchDistrict`,
-  returns district base URL and app name. Resolved once, cached in `settings`.
-- `login()` — `POST {base}/campus/verify.jsp?nonBrowser=true&username=&password=&appName=`,
-  holds the session cookie on a `requests.Session`.
-- `roster()`, `grades()`, `assignments(section_id)` — portal JSON endpoints.
+- `search_district(name, state)` — the flaky lookup above. Only called when
+  `CAMPUS_BASE` / `CAMPUS_APP` are unset; the result is cached in `settings`.
+- `login()` — `POST {base}verify.jsp` with `nonBrowser/username/password/appName`
+  in the **body**, holding the session cookie on a `requests.Session`. The body,
+  not the query string: a `requests` exception stringifies the URL, and that
+  string is stored and rendered as the sync status.
+  Answers `<AUTHENTICATION>success</AUTHENTICATION>` on either verdict's HTTP 200.
+- `roster()` — `resources/portal/roster`. Flat list; `courseName` and
+  `teacherDisplay` sit on the item, but period and term are under
+  `sectionPlacements[]`.
+- `grades()` — `resources/portal/grades`. Nests
+  `enrollment -> terms[] -> courses[] -> gradingTasks[]`. One enrollment per
+  school year; the future year arrives with `terms: null`. There is **no**
+  `progressPercent` on a task: the percent is
+  `progressPointsEarned / progressTotalPoints`, and `score` is the posted mark
+  (a 2822/2900 course posts `score: "96"`), so points are the truth and `score`
+  is only a fallback. Later terms overwrite earlier ones, leaving the most
+  recent graded term.
+- `assignments(section_id)` — `resources/portal/grades/detail/{sectionID}`. This
+  is the only path that carries assignment rows; every `assignment/section/...`
+  path 404s. Shape: `details[] -> categories[] -> assignments[]`, where the
+  category name ("Homework", "Labs", "Quizzes", "Tests and Papers") exists only
+  on the enclosing category node — which is why the parser walks the tree by hand.
+  Rows carry `objectSectionID`, `scorePoints`, `totalPoints`, `dueDate`,
+  `missing`, and `dropped` (dropped rows are skipped).
 
-Credentials, from env: `CAMPUS_DISTRICT`, `CAMPUS_STATE`, `CAMPUS_USER`, `CAMPUS_PASS`.
+Credentials, from env: `CAMPUS_USER`, `CAMPUS_PASS`, plus either
+`CAMPUS_BASE` + `CAMPUS_APP` (preferred) or `CAMPUS_DISTRICT` + `CAMPUS_STATE`.
+`campus.redact()` scrubs credential values from any message before it is logged,
+stored, or displayed.
 Absent credentials is not an error — the page renders empty with a "not configured"
 line, matching how the weather and email tools already degrade.
 
@@ -131,7 +157,9 @@ renders cached data with a "last synced N ago" or "sync failed" line.
 Three layers, cheapest first.
 
 **Weak-spot ranking (SQL, no LLM).** Two tables on the page:
-- Weakest courses: current percent ascending, with total points lost.
+- Weakest courses: current percent ascending, with total points lost. Points lost
+  clamps at zero per assignment — extra credit scores above the total, and a course
+  full of it would otherwise report negative loss.
 - Weakest categories: `SUM(points) / SUM(total)` grouped by `category`, both across
   all courses and per course. This answers "which kind of classwork costs me most".
 

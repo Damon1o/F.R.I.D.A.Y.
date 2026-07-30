@@ -7,55 +7,41 @@ written back.
 No Flask imports: the parsers are pure functions over decoded JSON, so they are
 unit-testable against recorded fixtures with no network.
 
-The endpoints are undocumented and versioned per district, so every parser is
-tolerant: it walks the response tree looking for the keys it needs instead of
-assuming a fixed shape. A district upgrade that moves a field deeper still works;
-one that renames it surfaces as a missing value, not a crash.
+Endpoints, verified live against a Campus 2025-26 portal:
+
+    POST verify.jsp                            -> <AUTHENTICATION>success</...>
+    GET  resources/portal/roster               -> [{sectionID, courseName, ...}]
+    GET  resources/portal/grades               -> [{enrollmentID, terms:[{courses:[
+                                                    {gradingTasks:[...]}]}]}]
+    GET  resources/portal/grades/detail/{sid}  -> {terms:[], details:[{task,
+                                                    categories:[{name, assignments:[]}]}]}
+
+`mobile.infinitecampus.com/api/district/searchDistrict` is only a convenience for
+finding the base URL, and it is unreliable (it answers 504 for long stretches).
+Set CAMPUS_BASE and CAMPUS_APP and it is never called.
 """
 import os
 
 import requests
 
 DISTRICT_SEARCH = "https://mobile.infinitecampus.com/api/district/searchDistrict"
-TIMEOUT = 20
+TIMEOUT = 30
+# Campus answers some paths with the sign-in page unless the request looks like a
+# browser. Cheaper than debugging an empty roster later.
+USER_AGENT = "Mozilla/5.0"
 
 
 class CampusError(RuntimeError):
     """Any failure reaching, authenticating to, or decoding Infinite Campus."""
 
 
-# --------------------------------------------------------------------------- #
-# Tree helpers — the portal nests differently per district, so don't assume.
-# --------------------------------------------------------------------------- #
-
 def _first(d: dict, *keys, default=None):
-    """First present, non-null value among `keys`. Case-sensitive, order matters."""
+    """First present, non-empty value among `keys`. Order matters."""
     for k in keys:
         v = d.get(k)
         if v is not None and v != "":
             return v
     return default
-
-
-SECTION_KEYS = ("sectionID", "sectionId", "_sectionID", "section_id")
-
-
-def _walk(node, section_id=None):
-    """Yield (nearest_section_id, dict) for every dict in the tree.
-
-    A sectionID found on a node applies to that node and everything under it,
-    which is how a course's grades and assignments get attributed without
-    knowing how deeply the district nests them.
-    """
-    if isinstance(node, dict):
-        sid = _first(node, *SECTION_KEYS, default=section_id)
-        sid = str(sid) if sid is not None else None
-        yield sid, node
-        for v in node.values():
-            yield from _walk(v, sid)
-    elif isinstance(node, list):
-        for v in node:
-            yield from _walk(v, section_id)
 
 
 def _num(v):
@@ -65,81 +51,132 @@ def _num(v):
         return None
 
 
+def _as_list(v) -> list:
+    return v if isinstance(v, list) else []
+
+
 # --------------------------------------------------------------------------- #
-# Parsers (pure)
+# Parsers (pure). Field names come from a live portal; aliases cover the older
+# spellings other districts still serve.
 # --------------------------------------------------------------------------- #
 
 def parse_courses(roster_json) -> list[dict]:
-    """Roster response -> one row per section. Later duplicates lose to earlier."""
+    """Roster -> one row per section. Period and term live in sectionPlacements."""
     out: dict[str, dict] = {}
-    for sid, node in _walk(roster_json):
-        if sid is None or sid in out:
+    for item in _as_list(roster_json):
+        if not isinstance(item, dict):
             continue
-        name = _first(node, "courseName", "name", "sectionName")
-        if not name:
+        sid = _first(item, "sectionID", "sectionId")
+        name = _first(item, "courseName", "name")
+        if sid is None or not name:
             continue
+        sid = str(sid)
+        placement = next((p for p in _as_list(item.get("sectionPlacements"))
+                          if isinstance(p, dict)), {})
         out[sid] = {
             "section_id": sid,
             "name": str(name),
-            "teacher": _first(node, "teacherDisplay", "teacherName", "primaryTeacher"),
-            "period": _first(node, "periodName", "periodSequence", "period"),
-            "term": _first(node, "termName", "term"),
+            "teacher": _first(item, "teacherDisplay", "teacherName")
+                       or _first(placement, "teacherDisplay"),
+            "period": _first(placement, "periodName", "periodSequence"),
+            "term": _first(placement, "termName") or _first(item, "termName"),
         }
     return list(out.values())
 
 
-PERCENT_KEYS = ("progressPercent", "percent", "score", "progressScore")
-LETTER_KEYS = ("progressScore", "score", "letterGrade", "gradeLetter")
+def _task_percent(task: dict):
+    """Percent for one grading task.
+
+    Points are the truth: districts on numeric grading scales report `score` as a
+    0-100 mark that is NOT the percent (a 2822/2900 course posts score "96"), and
+    districts on letter scales report a letter there. Fall back only if points are
+    missing.
+    """
+    earned = _num(task.get("progressPointsEarned"))
+    total = _num(task.get("progressTotalPoints"))
+    if earned is not None and total:
+        return earned / total * 100
+    pct = _num(_first(task, "progressPercent", "percent"))
+    if pct is not None:
+        return pct
+    return _num(_first(task, "progressScore", "score"))
+
+
+def _task_letter(task: dict):
+    """The posted mark, but only when it isn't just the percent again."""
+    raw = _first(task, "score", "progressScore")
+    if raw is None or _num(raw) is not None:
+        return None
+    return str(raw)
 
 
 def parse_grades(grades_json) -> dict[str, dict]:
-    """Grades response -> {section_id: {"grade_pct": float|None, "grade_letter": str|None}}.
+    """Grades -> {section_id: {grade_pct, grade_letter, term}}.
 
-    Campus reports a percent per grading task; the posted term grade is the one
-    that matters. Take the first task that carries a percent for a section and
-    ignore the rest, which are progress snapshots of the same number.
+    Terms are visited in sequence order and later ones overwrite earlier ones, so
+    what survives is the most recent term that actually has a grade — the number
+    the student cares about.
     """
     out: dict[str, dict] = {}
-    for sid, node in _walk(grades_json):
-        if sid is None or sid in out:
-            continue
-        pct = _num(_first(node, *PERCENT_KEYS))
-        if pct is None:
-            continue
-        letter = _first(node, *LETTER_KEYS)
-        out[sid] = {
-            "grade_pct": pct,
-            "grade_letter": str(letter) if isinstance(letter, str) else None,
-        }
+    for enrollment in _as_list(grades_json):
+        if not isinstance(enrollment, dict) or not enrollment.get("terms"):
+            continue  # future-year enrollments arrive with terms: null
+        terms = sorted(_as_list(enrollment["terms"]),
+                       key=lambda t: _num(t.get("termSeq")) or 0)
+        for term in terms:
+            for course in _as_list(term.get("courses")):
+                if not isinstance(course, dict) or course.get("dropped"):
+                    continue
+                sid = _first(course, "sectionID", "sectionId")
+                if sid is None:
+                    continue
+                for task in _as_list(course.get("gradingTasks")):
+                    pct = _task_percent(task) if isinstance(task, dict) else None
+                    if pct is None:
+                        continue
+                    out[str(sid)] = {
+                        "grade_pct": pct,
+                        "grade_letter": _task_letter(task),
+                        "term": _first(term, "termName") or _first(task, "termName"),
+                    }
     return out
 
 
-ASSIGNMENT_ID_KEYS = ("objectSectionID", "assignmentID", "id")
+def parse_assignments(detail_json, section_id: str) -> list[dict]:
+    """Grade detail for one section -> assignment rows.
 
-
-def parse_assignments(assignments_json, section_id: str) -> list[dict]:
-    """Assignment response for one section -> rows keyed on the Campus object id."""
+    The category name only exists on the enclosing category node, which is why
+    this walks the tree by hand instead of scanning for assignment-shaped dicts.
+    """
     out: dict[str, dict] = {}
-    for _sid, node in _walk(assignments_json):
-        name = _first(node, "assignmentName", "name", "title")
-        if not name:
+    detail = detail_json if isinstance(detail_json, dict) else {}
+    for group in _as_list(detail.get("details")):
+        if not isinstance(group, dict):
             continue
-        cid = _first(node, *ASSIGNMENT_ID_KEYS)
-        if cid is None:
-            continue
-        cid = str(cid)
-        if cid in out:
-            continue
-        out[cid] = {
-            "campus_id": cid,
-            "section_id": section_id,
-            "name": str(name),
-            "category": _first(node, "groupName", "categoryName", "group"),
-            "points": _num(_first(node, "scorePoints", "score", "pointsEarned")),
-            "total": _num(_first(node, "totalPoints", "pointsPossible", "possible")),
-            "due_at": _first(node, "dueDate", "endDate", "assignedDate"),
-            "missing": 1 if _first(node, "missing", "isMissing") in (True, 1, "true", "1") else 0,
-        }
+        for category in _as_list(group.get("categories")):
+            if not isinstance(category, dict):
+                continue
+            name = _first(category, "name", "groupName")
+            for a in _as_list(category.get("assignments")):
+                if not isinstance(a, dict) or a.get("dropped"):
+                    continue
+                cid = _first(a, "objectSectionID", "assignmentID", "id")
+                title = _first(a, "assignmentName", "name")
+                if cid is None or not title:
+                    continue
+                due = _first(a, "dueDate", "endDate", "assignedDate")
+                out[str(cid)] = {
+                    "campus_id": str(cid),
+                    "section_id": section_id,
+                    "name": str(title),
+                    "category": str(name) if name else None,
+                    "points": _num(_first(a, "scorePoints", "score")),
+                    "total": _num(_first(a, "totalPoints", "pointsPossible")),
+                    # "2025-11-01T03:59:00.000Z" -> "2025-11-01". Dates are all the
+                    # page and the SQL ever sort or display.
+                    "due_at": str(due)[:10] if due else None,
+                    "missing": 1 if a.get("missing") in (True, 1, "true", "1") else 0,
+                }
     return list(out.values())
 
 
@@ -148,16 +185,20 @@ def parse_assignments(assignments_json, section_id: str) -> list[dict]:
 # --------------------------------------------------------------------------- #
 
 def search_district(name: str, state: str, session=None) -> dict:
-    """Resolve a district name + state to its portal base URL and app name."""
+    """Resolve a district name + state to its portal base URL and app name.
+
+    Only used when CAMPUS_BASE / CAMPUS_APP are unset. This service is flaky.
+    """
     s = session or requests.Session()
     try:
         resp = s.get(DISTRICT_SEARCH, params={"query": name, "state": state}, timeout=TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
     except requests.RequestException as e:
-        raise CampusError(f"district lookup failed: {e}")
-    except ValueError as e:
-        raise CampusError(f"district lookup returned non-JSON: {e}")
+        raise CampusError(f"district lookup failed ({e.__class__.__name__}); "
+                          f"set CAMPUS_BASE and CAMPUS_APP to skip it")
+    except ValueError:
+        raise CampusError("district lookup returned non-JSON")
 
     matches = data.get("data") if isinstance(data, dict) else data
     if not matches:
@@ -179,17 +220,20 @@ class Campus:
         self.username = username
         self.password = password
         self.session = session or requests.Session()
+        try:
+            self.session.headers["User-Agent"] = USER_AGENT
+        except (AttributeError, TypeError):
+            pass  # a test double without headers
 
     def _get(self, path: str):
-        url = self.base + path.lstrip("/")
         try:
-            resp = self.session.get(url, timeout=TIMEOUT)
+            resp = self.session.get(self.base + path.lstrip("/"), timeout=TIMEOUT)
             resp.raise_for_status()
             return resp.json()
         except requests.RequestException as e:
-            raise CampusError(f"GET {path} failed: {e}")
+            raise CampusError(f"GET {path} failed ({e.__class__.__name__})")
         except ValueError:
-            # A portal that wants a login returns the sign-in HTML page, not JSON.
+            # A portal that wants a login answers with the sign-in HTML, not JSON.
             raise CampusError(f"GET {path} returned non-JSON (session expired?)")
 
     def login(self) -> None:
@@ -214,7 +258,6 @@ class Campus:
         except requests.RequestException as e:
             # Exception type only. Never the message: it can carry request detail.
             raise CampusError(f"sign-in request failed ({e.__class__.__name__})")
-        # verify.jsp answers 200 either way; the body carries the verdict.
         if "success" not in resp.text.lower():
             raise CampusError("sign-in rejected")
 
@@ -225,8 +268,13 @@ class Campus:
         return self._get("resources/portal/grades")
 
     def assignments(self, section_id: str):
-        return self._get(f"resources/portal/assignment/section/{section_id}")
+        """Grade detail: the only portal path that carries assignment rows."""
+        return self._get(f"resources/portal/grades/detail/{section_id}")
 
+
+# --------------------------------------------------------------------------- #
+# Configuration
+# --------------------------------------------------------------------------- #
 
 def redact(text: str) -> str:
     """Strip credential values out of a message before it is stored or displayed.
@@ -244,11 +292,21 @@ def redact(text: str) -> str:
 
 
 def credentials() -> dict | None:
-    """Campus credentials from env, or None when the integration isn't configured."""
-    district = os.environ.get("CAMPUS_DISTRICT", "").strip()
-    state = os.environ.get("CAMPUS_STATE", "").strip()
+    """Campus config from env, or None when the integration isn't configured.
+
+    `base`/`app_name` are optional: set them to address the portal directly and
+    skip the district-search service entirely. Otherwise district + state are
+    required so it can be looked up.
+    """
     user = os.environ.get("CAMPUS_USER", "").strip()
     password = os.environ.get("CAMPUS_PASS", "")
-    if not (district and state and user and password):
+    base = os.environ.get("CAMPUS_BASE", "").strip()
+    app_name = os.environ.get("CAMPUS_APP", "").strip()
+    district = os.environ.get("CAMPUS_DISTRICT", "").strip()
+    state = os.environ.get("CAMPUS_STATE", "").strip()
+    if not (user and password):
         return None
-    return {"district": district, "state": state, "user": user, "password": password}
+    if not ((base and app_name) or (district and state)):
+        return None
+    return {"district": district, "state": state, "user": user, "password": password,
+            "base": base, "app_name": app_name}
