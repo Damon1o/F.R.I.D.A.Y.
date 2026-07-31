@@ -63,7 +63,15 @@
     corners.forEach(function (c) { c.style.transform = ''; });
   }
 
+  // An open <dialog> paints in the top layer, which beats any z-index, so the
+  // cursor has to move inside it or the real pointer shows through the modal.
+  function reparent(node) {
+    var host = (node.closest ? node.closest('dialog[open]') : null) || document.body;
+    if (wrap.parentNode !== host) host.appendChild(wrap);
+  }
+
   addEventListener('mouseover', function (e) {
+    reparent(e.target);
     var target = e.target.closest ? e.target.closest(TARGETS) : null;
     if (target === locked) return;
     if (!target) return release();

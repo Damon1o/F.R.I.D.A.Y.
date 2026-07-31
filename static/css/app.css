@@ -2070,11 +2070,26 @@ select.gpa-level { width: 8.5rem; }
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--s-4);
-  width: min(760px, 100%);
+  gap: var(--s-6);
+  width: min(1100px, 92vw);
   margin: 0 auto;
-  padding: var(--s-8) var(--s-6);
+  padding: var(--s-10) var(--s-6);
 }
+
+/* Full screen means test-sized text, not sidebar-sized: the passage and the four
+   choices are the only things on screen, so they get the room. */
+.sat-modal .card-head h2 { font-size: var(--text-headline); }
+.sat-modal .sat-stimulus { font-size: var(--text-headline-sm); line-height: 1.6; }
+.sat-modal .sat-prompt { font-size: var(--text-headline-sm); line-height: 1.5; }
+.sat-modal .sat-choices { gap: var(--s-3); }
+
+.sat-modal .sat-choice {
+  padding: var(--s-4) var(--s-5);
+  font-size: var(--text-headline-sm);
+  align-items: center;
+}
+
+.sat-modal .sat-score { font-size: var(--text-display); }
 
 .sat-modal-exit {
   position: absolute;
