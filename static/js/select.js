@@ -1,6 +1,3 @@
-// Custom dropdown. Progressive enhancement over any <select data-select>: the
-// native element stays in the DOM as the source of truth (value, change events,
-// form posts) and this draws a listbox over it that matches the design system.
 (function () {
   function build(select) {
     const wrap = document.createElement('div');
@@ -24,7 +21,6 @@
     list.setAttribute('role', 'listbox');
     list.hidden = true;
 
-    // One row per <option>, with <optgroup> labels kept as headings.
     const rows = [];
     Array.from(select.children).forEach((node) => {
       const options = node.tagName === 'OPTGROUP' ? Array.from(node.children) : [node];
