@@ -53,6 +53,8 @@
     verdict.hidden = false;
     verdict.innerHTML = `
       <p class="sat-result">${d.correct ? 'Correct' : `Answer: ${d.answer}`}</p>
+      ${d.trap ? `<p class="sat-trap"><span>Trap: ${esc(d.trap)}</span></p>` : ''}
+      ${d.why ? `<p class="subtle"><strong>Why ${letter} felt right:</strong> ${esc(d.why)}</p>` : ''}
       ${d.explanation ? `<p class="subtle">${esc(d.explanation)}</p>` : ''}
       <button class="btn-primary" id="sat-next" type="button">
         ${last ? 'Finish' : 'Next question'}

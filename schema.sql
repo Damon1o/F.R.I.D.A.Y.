@@ -214,6 +214,11 @@ CREATE TABLE IF NOT EXISTS sat_attempts (
     answered_at TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
 );
 
+-- Every question names the SAT trap it sets and why each wrong choice tempts you,
+-- so a missed question can be reviewed later with the trick spelled out.
+ALTER TABLE sat_questions ADD COLUMN IF NOT EXISTS trap TEXT NOT NULL DEFAULT '';
+ALTER TABLE sat_questions ADD COLUMN IF NOT EXISTS why_wrong TEXT NOT NULL DEFAULT '{}';
+
 CREATE INDEX IF NOT EXISTS sat_questions_skill_idx ON sat_questions (section, skill);
 CREATE INDEX IF NOT EXISTS sat_attempts_question_idx ON sat_attempts (question_id);
 

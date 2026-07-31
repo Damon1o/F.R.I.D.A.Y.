@@ -2099,6 +2099,62 @@ select.gpa-level { width: 8.5rem; }
   padding: var(--s-2);
 }
 
+/* Missed questions: collapsed by default, so twenty of them still read as a list.
+   <details> does the open/close, so there is no JS behind this card. */
+.sat-misses { display: flex; flex-direction: column; gap: var(--s-2); }
+
+.sat-miss {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--glass-surface);
+}
+
+.sat-miss > summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-3) var(--s-4);
+  cursor: pointer;
+  list-style: none;
+}
+
+.sat-miss > summary::-webkit-details-marker { display: none; }
+.sat-miss > summary:hover { background: var(--glass-hover); border-radius: var(--radius-lg); }
+.sat-miss[open] > summary { border-bottom: 1px solid var(--hairline); border-radius: 0; }
+
+.sat-miss-q {
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;          /* the prompt is a title here, not the question */
+  overflow: hidden;
+}
+
+.sat-miss > *:not(summary) { margin: var(--s-3) var(--s-4); }
+
+.sat-miss-choices { display: flex; flex-direction: column; gap: var(--s-2); list-style: none; }
+
+.sat-miss-choice {
+  display: flex;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+
+.sat-miss-choice em { display: block; font-style: normal; margin-top: var(--s-1); }
+.sat-miss-choice.is-right { border-color: var(--hairline-strong); background: var(--glass-overlay); }
+.sat-miss-choice.is-wrong { border-color: var(--danger); color: var(--danger); }
+
+.sat-trap {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+
 /* Progress toward the target on the results card. */
 .sat-target { display: flex; flex-direction: column; gap: var(--s-2); width: 100%; }
 .sat-target-bar {

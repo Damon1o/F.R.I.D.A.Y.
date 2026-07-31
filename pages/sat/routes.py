@@ -12,6 +12,7 @@ def sat_page():
                            progress=models.progress(),
                            difficulties=models.DIFFICULTIES,
                            tests=models.tests(),
+                           mistakes=models.mistakes(),
                            chart=models.chart(),
                            open_test=models.open_test(),
                            modules=models.MODULES)

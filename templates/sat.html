@@ -77,6 +77,47 @@
       </div>
     </section>
 
+    {# ---- Review: every question whose latest answer was wrong. Plain <details>,
+           no JS — the analysis is written when the question is, so it is already here. #}
+    {% if mistakes %}
+    <section class="card">
+      <div class="card-head">
+        <h2>Missed questions</h2>
+        <span class="tag label-mono">{{ mistakes | length }} to review</span>
+      </div>
+      <div class="sat-misses">
+        {% for m in mistakes %}
+        <details class="sat-miss">
+          <summary>
+            <span class="sat-miss-q">{{ m.prompt }}</span>
+            <span class="label-mono faint">{{ m.skill }} · you said {{ m.chosen }} · key {{ m.answer }}</span>
+          </summary>
+          {% if m.stimulus %}<p class="sat-stimulus">{{ m.stimulus }}</p>{% endif %}
+          <ul class="sat-miss-choices">
+            {% for c in m.choices %}
+            {% set letter = 'ABCD'[loop.index0] %}
+            <li class="sat-miss-choice {{ 'is-right' if letter == m.answer }}{{ ' is-wrong' if letter == m.chosen }}">
+              <span class="sat-letter label-mono">{{ letter }}</span>
+              <span>
+                {{ c }}
+                {% if letter != m.answer and m.why_wrong.get(letter) %}
+                <em class="faint">{{ m.why_wrong[letter] }}</em>
+                {% endif %}
+              </span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% if m.trap %}
+          <p class="sat-trap">{{ icon('crosshair', 14) }}<span>Trap: {{ m.trap }}</span></p>
+          {% endif %}
+          {% if m.explanation %}<p class="subtle"><strong>Why {{ m.answer }} is right:</strong> {{ m.explanation }}</p>{% endif %}
+          <p class="faint label-mono">{{ m.difficulty }} · {{ m.answered_at[:10] }}</p>
+        </details>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
     {# The test player takes over the whole screen while a module is running:
        a native <dialog>, so Escape and the backdrop come for free. #}
     <dialog class="sat-modal" id="sat-test-modal">

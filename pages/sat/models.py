@@ -66,18 +66,33 @@ _STYLE = {
     ),
 }
 
+# The traps are the point of the test: a real SAT distractor is a specific slip
+# with a name, and naming it is what makes a missed question worth reviewing.
+_TRAPS = (
+    "Every question must set one of the traps the real SAT punishes, never a "
+    "random wrong answer. The standard traps: a choice that is true in the world "
+    "but never stated in the text; a choice half right and half wrong; extreme "
+    "wording (always, never, proves); the answer to a question that was not asked "
+    "(solving for x when the prompt wants 2x, or the part when it wants the "
+    "whole); a sign flip or order-of-operations slip; diameter used as radius; "
+    "percent change confused with percent of; a rate left in the wrong units."
+)
+
 _FORMAT = (
     'Return ONLY a JSON array, no prose and no code fence. Each element: '
     '{"stimulus": string ("" when the question needs no passage), '
     '"prompt": string, "choices": [4 strings, no "A)" labels], '
-    '"answer": "A"|"B"|"C"|"D", "explanation": string (max 2 sentences)}. '
+    '"answer": "A"|"B"|"C"|"D", "explanation": string (max 2 sentences), '
+    '"trap": string (the trap this question sets, under 8 words), '
+    '"why_wrong": {letter: string} for each of the three wrong choices — the '
+    'exact slip that lands a student on it, one sentence, second person}. '
     'Vary which letter is correct. Never reuse a passage or a number from a '
     'question you were shown as already asked.'
 )
 
 
 def prompt_for(section: str, skill: str, difficulty: str) -> str:
-    return (f"{_STYLE[section]}\n\nWrite questions for the skill: {skill} "
+    return (f"{_STYLE[section]}\n\n{_TRAPS}\n\nWrite questions for the skill: {skill} "
             f"({domain_of(section, skill)}), difficulty: {difficulty}.\n\n{_FORMAT}")
 
 
@@ -112,11 +127,17 @@ def _clean(q: dict) -> dict | None:
         return None
     if not str(q.get("prompt", "")).strip():
         return None
+    why = q.get("why_wrong")
+    why = {str(k).strip().upper()[:1]: str(v).strip()
+           for k, v in why.items() if str(v or "").strip()} if isinstance(why, dict) else {}
+    why.pop(answer, None)               # the key is not a wrong choice
     return {"stimulus": str(q.get("stimulus") or "").strip(),
             "prompt": str(q["prompt"]).strip(),
             "choices": [str(c).strip() for c in choices],
             "answer": answer,
-            "explanation": str(q.get("explanation") or "").strip()}
+            "explanation": str(q.get("explanation") or "").strip(),
+            "trap": str(q.get("trap") or "").strip(),
+            "why_wrong": {k: v for k, v in why.items() if k in "ABCD"}}
 
 
 def _seen(section: str, skill: str) -> str:
@@ -188,10 +209,11 @@ def _store(section: str, skill: str, difficulty: str, q: dict) -> dict:
     """Insert one question; return it without the answer key."""
     row = execute(
         "INSERT INTO sat_questions (section, domain, skill, difficulty, stimulus,"
-        " prompt, choices, answer, explanation)"
-        " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+        " prompt, choices, answer, explanation, trap, why_wrong)"
+        " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
         (section, domain_of(section, skill), skill, difficulty, q["stimulus"], q["prompt"],
-         json.dumps(q["choices"]), q["answer"], q["explanation"]),
+         json.dumps(q["choices"]), q["answer"], q["explanation"], q.get("trap", ""),
+         json.dumps(q.get("why_wrong") or {})),
     ).fetchone()
     return {"id": row["id"], "section": section, "domain": domain_of(section, skill),
             "skill": skill, "difficulty": difficulty, "stimulus": q["stimulus"],
@@ -247,7 +269,30 @@ def answer(question_id, chosen: str) -> dict:
     execute("INSERT INTO sat_attempts (question_id, chosen, correct) VALUES (%s, %s, %s)",
             (question_id, chosen, correct))
     return {"error": None, "correct": bool(correct), "answer": q["answer"],
-            "explanation": q["explanation"], "skill": q["skill"]}
+            "explanation": q["explanation"], "skill": q["skill"],
+            # Miss it and you get the trick, not just the key.
+            "trap": q["trap"] if not correct else "",
+            "why": json.loads(q["why_wrong"] or "{}").get(chosen, "") if not correct else ""}
+
+
+def mistakes(limit: int = 20) -> list[dict]:
+    """Questions whose most recent answer was wrong — the review list.
+
+    Only the latest attempt counts, so getting one right on the retry retires it.
+    """
+    rows = query(
+        "SELECT * FROM (SELECT DISTINCT ON (a.question_id) a.id AS attempt_id, a.chosen,"
+        " a.correct, a.answered_at, q.id AS question_id, q.section, q.skill, q.difficulty,"
+        " q.stimulus, q.prompt, q.choices, q.answer, q.explanation, q.trap, q.why_wrong"
+        " FROM sat_attempts a JOIN sat_questions q ON q.id = a.question_id"
+        " ORDER BY a.question_id, a.id DESC) latest"
+        " WHERE correct = 0 ORDER BY attempt_id DESC LIMIT %s", (limit,))
+    out = []
+    for r in rows:
+        why = json.loads(r["why_wrong"] or "{}")
+        out.append({**r, "choices": json.loads(r["choices"]),
+                    "why_wrong": why, "why": why.get(r["chosen"], "")})
+    return out
 
 
 # --------------------------------------------------------------------------- #

@@ -23,7 +23,8 @@ def _payload(n=2, answer="B"):
     return json.dumps([
         {"stimulus": f"Passage {i}", "prompt": f"Question {i}?",
          "choices": ["one", "two", "three", "four"], "answer": answer,
-         "explanation": "Because."}
+         "explanation": "Because.", "trap": "true but not stated",
+         "why_wrong": {letter: f"{letter} is the trap." for letter in "ABCD"}}
         for i in range(n)
     ])
 
@@ -278,6 +279,34 @@ def test_test_apis_refuse_without_a_key(client):
     assert client.post("/api/sat/test/1/module/rw1").status_code == 400
     assert client.post("/api/sat/test/answer", json={"item_id": 1, "chosen": "A"}).status_code == 400
     assert client.post("/api/sat/reset").get_json() == {"attempts": 0, "tests": 0}
+
+
+# --------------------------------------------------------------------------- #
+# Traps and the missed-question review
+# --------------------------------------------------------------------------- #
+def test_a_wrong_answer_explains_the_trap_it_set(ctx):
+    q = models.generate("math", "Percentages", count=1, client=FakeLLM(_payload(1, "B")),
+                        checker=FakeLLM(AGREE))["questions"][0]
+    miss = models.answer(q["id"], "C")
+    assert miss["trap"] == "true but not stated" and miss["why"] == "C is the trap."
+    hit = models.answer(q["id"], "B")                    # right: no trick to explain
+    assert hit["trap"] == "" and hit["why"] == ""
+    # The key is not a wrong choice, so no analysis is stored for it.
+    assert "B" not in json.loads(
+        query("SELECT why_wrong FROM sat_questions WHERE id = %s", (q["id"],), one=True)["why_wrong"])
+
+
+def test_mistakes_lists_the_latest_wrong_answer_and_retires_it_when_fixed(ctx):
+    q = models.generate("math", "Percentages", count=1, client=FakeLLM(_payload(1, "B")),
+                        checker=FakeLLM(AGREE))["questions"][0]
+    assert models.mistakes() == []
+    models.answer(q["id"], "A")
+    row = models.mistakes()[0]
+    assert row["question_id"] == q["id"] and row["chosen"] == "A" and row["answer"] == "B"
+    assert row["choices"] == ["one", "two", "three", "four"]
+    assert row["why"] == "A is the trap." and row["trap"] == "true but not stated"
+    models.answer(q["id"], "B")                          # answered right since: retired
+    assert models.mistakes() == []
 
 
 def test_chart_plots_finished_tests_against_the_target(ctx):
