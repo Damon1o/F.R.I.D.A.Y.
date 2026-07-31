@@ -188,3 +188,54 @@ CREATE TABLE IF NOT EXISTS gpa_levels (
 -- the sync infers weight and the user pins it when a transcript disagrees.
 ALTER TABLE gpa_levels ADD COLUMN IF NOT EXISTS weight REAL;
 ALTER TABLE gpa_levels ALTER COLUMN level DROP NOT NULL;
+
+-- SAT Prep. Questions are LLM-generated against the College Board taxonomy
+-- (section -> domain -> skill) and kept, so a set can be re-taken and the
+-- weak-skill ranking has history to rank on.
+CREATE TABLE IF NOT EXISTS sat_questions (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    section     TEXT NOT NULL,          -- math | reading | writing
+    domain      TEXT NOT NULL,
+    skill       TEXT NOT NULL,
+    difficulty  TEXT NOT NULL DEFAULT 'medium',
+    stimulus    TEXT,                   -- passage / setup, may be empty
+    prompt      TEXT NOT NULL,
+    choices     TEXT NOT NULL,          -- JSON array of 4 strings
+    answer      TEXT NOT NULL,          -- 'A'..'D'
+    explanation TEXT,
+    created_at  TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+);
+
+CREATE TABLE IF NOT EXISTS sat_attempts (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    question_id BIGINT NOT NULL REFERENCES sat_questions (id) ON DELETE CASCADE,
+    chosen      TEXT NOT NULL,
+    correct     INTEGER NOT NULL,
+    answered_at TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS')
+);
+
+CREATE INDEX IF NOT EXISTS sat_questions_skill_idx ON sat_questions (section, skill);
+CREATE INDEX IF NOT EXISTS sat_attempts_question_idx ON sat_attempts (question_id);
+
+-- A full-length practice test: four modules, official counts and clocks. Module 2
+-- of each section is generated after module 1 is scored, because the real digital
+-- SAT routes you to an easier or harder second module on that performance.
+CREATE TABLE IF NOT EXISTS sat_tests (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    started_at  TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS'),
+    finished_at TEXT,
+    rw_score    INTEGER,
+    math_score  INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS sat_test_items (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    test_id     BIGINT NOT NULL REFERENCES sat_tests (id) ON DELETE CASCADE,
+    module      TEXT NOT NULL,          -- rw1 | rw2 | math1 | math2
+    position    INTEGER NOT NULL,
+    question_id BIGINT NOT NULL REFERENCES sat_questions (id) ON DELETE CASCADE,
+    chosen      TEXT,
+    correct     INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS sat_test_items_test_idx ON sat_test_items (test_id, module, position);

@@ -6,20 +6,174 @@
 <section class="page-head">
   <div>
     <h1 class="display">SAT Prep</h1>
-    <p class="subtle">Module-level weak spots and original practice questions.</p>
+    <p class="subtle">Original questions on the College Board blueprint, aimed at your weak skills.</p>
   </div>
-  <span class="tag label-mono">Not built yet</span>
+  <span class="tag label-mono">
+    {%- if progress.accuracy is not none -%}
+    {{ progress.right_count }}/{{ progress.asked }} · {{ '%.0f' | format(progress.accuracy) }}%
+    {%- else -%}No attempts yet{%- endif -%}
+  </span>
 </section>
 
-<section class="card">
-  <div class="card-head">
-    <h2>Coming next</h2>
+<div class="sat-layout">
+  <div class="sat-main">
+    {# ---- The writer. One select: pick a skill, or let it pick your weakest. ---- #}
+    <section class="card">
+      <div class="card-head">
+        <h2>Practice set</h2>
+      </div>
+      <div class="sat-controls">
+        <select id="sat-skill" data-select aria-label="Skill">
+          {% for section in taxonomy %}
+          <option value="{{ section }}">{{ section | capitalize }} — weakest skill</option>
+          {% endfor %}
+          {% for section, domains in taxonomy.items() %}
+          {% for domain, skills in domains.items() %}
+          <optgroup label="{{ section | capitalize }} · {{ domain }}">
+            {% for skill in skills %}
+            <option value="{{ section }}|{{ skill }}">{{ skill }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+          {% endfor %}
+        </select>
+        <select id="sat-difficulty" data-select aria-label="Difficulty">
+          {% for d in difficulties %}
+          <option value="{{ d }}" {{ 'selected' if d == 'medium' }}>{{ d | capitalize }}</option>
+          {% endfor %}
+        </select>
+        <select id="sat-count" data-select aria-label="Questions">
+          {% for n in [2, 4, 6, 8] %}
+          <option value="{{ n }}" {{ 'selected' if n == 4 }}>{{ n }} questions</option>
+          {% endfor %}
+        </select>
+        <button class="btn-primary" id="sat-start" type="button">
+          {{ icon('play', 16) }}<span>Start</span>
+        </button>
+      </div>
+      <p class="faint" id="sat-status">F.R.I.D.A.Y. writes each set fresh — about 15 seconds.</p>
+    </section>
+
+    {# Filled by sat.js: one question at a time, graded on submit. #}
+    <section class="card sat-quiz" id="sat-quiz" hidden></section>
+
+    {# ---- Full-length test: four modules, official counts and clocks ---- #}
+    <section class="card" id="sat-test-card">
+      <div class="card-head">
+        <h2>Full-length test</h2>
+        <span class="tag label-mono">98 questions · 2h 14m</span>
+      </div>
+      <p class="subtle">
+        Two Reading and Writing modules ({{ modules.rw1.count }} questions, {{ modules.rw1.minutes }} minutes each),
+        then two Math ({{ modules.math1.count }} / {{ modules.math1.minutes }}). Module 2 adapts to how module 1 goes,
+        the way the real digital SAT does. Each module is written and answer-checked when you reach it — about two minutes.
+      </p>
+      <div class="sat-controls">
+        <button class="btn-primary" id="sat-test-start" type="button"
+                {% if open_test %}data-resume="{{ open_test.test_id }}" data-module="{{ open_test.module }}"{% endif %}>
+          {{ icon('file-text', 16) }}<span>{{ 'Resume test' if open_test else 'Start full test' }}</span>
+        </button>
+        <span class="faint" id="sat-test-status"></span>
+      </div>
+    </section>
+
+    {# The test player takes over the whole screen while a module is running:
+       a native <dialog>, so Escape and the backdrop come for free. #}
+    <dialog class="sat-modal" id="sat-test-modal">
+      <button class="btn-ghost sat-modal-exit" id="sat-test-exit" type="button" aria-label="Exit test">
+        {{ icon('x', 18) }}
+      </button>
+      <div class="sat-modal-body" id="sat-test-player"></div>
+    </dialog>
   </div>
-  <p class="subtle">
-    This is a placeholder. SAT Prep is its own subsystem — ingesting your Bluebook score
-    reports to find which Module 1 / Module 2 domains you lose points in, then having
-    F.R.I.D.A.Y. generate original questions against that blueprint. It gets its own
-    design spec before any of it is built.
-  </p>
-</section>
+
+  <div class="sat-side">
+    <section class="card">
+      <div class="card-head">
+        <h2>Weakest skills</h2>
+        {# Two-step: the second click is the confirmation, no modal needed. #}
+        <button class="btn-ghost" id="sat-reset" type="button" data-armed="0">
+          {{ icon('rotate-ccw', 16) }}<span>Reset stats</span>
+        </button>
+      </div>
+      <ul class="rank-list sat-scroll">
+        {% for s in progress.skills %}
+        <li class="rank-row">
+          <span class="rank-name">{{ s.skill }} <em class="faint">{{ s.section }}</em></span>
+          <span class="rank-meter">
+            <span class="rank-fill" style="width: {{ '%.0f' | format(s.accuracy) }}%"></span>
+          </span>
+          <span class="rank-val">{{ '%.0f' | format(s.accuracy) }}% <em class="faint">{{ s.right_count }}/{{ s.asked }}</em></span>
+        </li>
+        {% else %}
+        <li class="empty">Nothing answered yet. Run a set and this ranks itself.</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    {% if tests %}
+    <section class="card">
+      <div class="card-head">
+        <h2>Test scores</h2>
+        <span class="tag label-mono">Target {{ chart.target }}</span>
+      </div>
+      {# Estimated totals over time against the target line. #}
+      <svg class="sat-chart" viewBox="0 0 {{ chart.w | int }} {{ chart.h | int }}"
+           role="img" aria-label="Estimated SAT total per test, target {{ chart.target }}">
+        <defs>
+          <linearGradient id="sat-chart-fade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="currentColor" stop-opacity="0.22"></stop>
+            <stop offset="1" stop-color="currentColor" stop-opacity="0"></stop>
+          </linearGradient>
+        </defs>
+        <polygon class="sat-chart-area" points="{{ chart.area }}"></polygon>
+        <line class="sat-chart-target" x1="0" y1="{{ chart.target_y }}"
+              x2="{{ chart.w | int }}" y2="{{ chart.target_y }}"></line>
+        <polyline class="sat-chart-line" points="{{ chart.line }}"></polyline>
+        {% for p in chart.points %}
+        <circle class="sat-chart-dot" cx="{{ p.x }}" cy="{{ p.y }}" r="3">
+          <title>{{ p.date }} — {{ p.total }}</title>
+        </circle>
+        {% endfor %}
+      </svg>
+      <p class="subtle">
+        Latest {{ chart.latest }} · best {{ chart.best }} ·
+        {% if chart.gap %}{{ chart.gap }} points to {{ chart.target }}{% else %}target cleared{% endif %}
+      </p>
+      <ul class="rank-list">
+        {% for t in tests %}
+        <li class="rank-row">
+          <span class="rank-name">{{ t.finished_at[:10] }}</span>
+          <span class="rank-val">
+            <strong>{{ t.total }}</strong>
+            <em class="faint">{{ t.rw_score }} RW · {{ t.math_score }} M</em>
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Not practiced</h2>
+      </div>
+      <div class="sat-scroll">
+        {% for section, names in progress.untouched.items() %}
+        {% for name in names %}
+        <div class="sat-scroll-item">
+          <span>{{ name }}</span>
+          <span class="label-mono faint">{{ section }}</span>
+        </div>
+        {% endfor %}
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/select.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sat.js') }}"></script>
 {% endblock %}

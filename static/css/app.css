@@ -1910,3 +1910,278 @@ select.gpa-level { width: 8.5rem; }
   .gpa-row > .gpa-mark { grid-row: 1; grid-column: 2; }
   .gpa-row > .icon-btn, .gpa-row-spacer { grid-column: 2; justify-self: end; }
 }
+
+/* ---- SAT Prep ----
+   Same split as Grades: the question player is the tall column, the ranking
+   rides beside it. The choice buttons are the only new interactive surface —
+   a row of full-width targets, graded in place rather than on a results page. */
+.sat-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.85fr);
+  align-items: start;
+  gap: var(--gap);
+}
+
+.sat-main, .sat-side { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+
+@media (max-width: 1100px) {
+  .sat-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* .card is display:flex, which outranks the [hidden] attribute. */
+.sat-quiz[hidden] { display: none; }
+
+.sat-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.sat-controls select { max-width: 260px; }
+
+.sat-stimulus {
+  border-left: 2px solid var(--outline-variant);
+  padding-left: var(--s-4);
+  color: var(--on-surface-variant);
+  white-space: pre-wrap;
+}
+
+.sat-prompt { font-weight: 500; }
+
+.sat-choices { display: flex; flex-direction: column; gap: var(--s-2); }
+
+.sat-choice {
+  display: flex;
+  gap: var(--s-3);
+  align-items: baseline;
+  text-align: left;
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--glass-surface);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+
+.sat-choice:hover:not(:disabled) { background: var(--glass-hover); border-color: var(--hairline-strong); }
+.sat-choice:disabled { cursor: default; }
+
+.sat-letter { color: var(--on-surface-faint); }
+
+/* Monochrome system: right is the raised, outlined one; wrong is the danger
+   token, which is the only non-neutral colour the palette carries. */
+.sat-choice.is-right {
+  border-color: var(--hairline-strong);
+  background: var(--glass-overlay);
+}
+
+.sat-choice.is-wrong {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.sat-verdict { display: flex; flex-direction: column; gap: var(--s-2); align-items: flex-start; }
+.sat-result { font-family: var(--font-display); font-weight: 600; }
+
+/* Not practiced: one scrolling list, not a wall of chips. The fade at both ends is
+   a mask, so there are no overlay elements to keep in sync, and the entrance is a
+   scroll-driven animation — native in Chrome, so no observer and no motion library. */
+.sat-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  max-height: 268px;
+  overflow-y: auto;
+  padding: var(--s-2) var(--s-1);
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+  mask-image: linear-gradient(to bottom, transparent, #000 28px,
+                              #000 calc(100% - 28px), transparent);
+}
+
+.sat-scroll-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--glass-surface);
+  animation: sat-item-in linear both;
+  animation-timeline: view(block);
+  animation-range: entry 0% cover 16%;
+}
+
+.sat-scroll-item:hover { background: var(--glass-hover); }
+
+/* The weakest-skills ranking scrolls and animates the same way; its rows bring
+   their own layout, so they only borrow the entrance. */
+.rank-list.sat-scroll { padding: var(--s-2) 0; gap: 2px; }
+.sat-scroll .rank-row {
+  animation: sat-item-in linear both;
+  animation-timeline: view(block);
+  animation-range: entry 0% cover 16%;
+}
+
+@keyframes sat-item-in {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sat-scroll-item, .sat-scroll .rank-row { animation: none; }
+}
+
+/* Score history. Monochrome: the run is the solid line, the 1530 target is the
+   dashed rule it has to cross. */
+.sat-chart { width: 100%; height: auto; overflow: visible; }
+.sat-chart { color: var(--primary); }            /* the gradient stops read currentColor */
+.sat-chart-area { fill: url(#sat-chart-fade); stroke: none; }
+.sat-chart-line { fill: none; stroke: var(--primary); stroke-width: 2; stroke-linejoin: round; }
+.sat-chart-dot { fill: var(--surface); stroke: var(--primary); stroke-width: 2; }
+.sat-chart-target {
+  stroke: var(--on-surface-faint);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+/* The test takes the whole screen: a real test has no sidebar to wander into.
+   Native <dialog>, so it sits in the top layer and Escape exits for free. */
+.sat-modal {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--surface);
+  color: var(--on-surface);
+}
+
+.sat-modal::backdrop { background: var(--scrim); }
+
+.sat-modal-body {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: var(--s-8) var(--s-6);
+}
+
+.sat-modal-exit {
+  position: absolute;
+  top: var(--s-4);
+  right: var(--s-4);
+  z-index: 1;
+  padding: var(--s-2);
+}
+
+/* Progress toward the target on the results card. */
+.sat-target { display: flex; flex-direction: column; gap: var(--s-2); width: 100%; }
+.sat-target-bar {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-high);
+  overflow: hidden;
+}
+.sat-target-fill { display: block; height: 100%; background: var(--primary); }
+
+/* The skill name is long and the section is only a hint — same call the Grades
+   side column makes about teacher names. */
+.sat-side .rank-meter { flex: 0 0 clamp(40px, 14%, 72px); }
+
+/* ---- Custom select ----
+   The native <select> is still in the DOM (it owns the value); it is only made
+   invisible, never display:none, so it stays focusable for assistive tech. */
+/* .card carries backdrop-filter, which makes it a stacking context: the menu's
+   z-index is trapped inside its own card and the next card paints over it. Raise
+   the whole card while a menu is open. */
+.card:has(.select-btn[aria-expanded="true"]) { position: relative; z-index: 5; }
+
+.select { position: relative; display: inline-flex; }
+.select-native { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+
+.select-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-width: 180px;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--glass-surface);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out),
+              background var(--dur-fast) var(--ease-out);
+}
+
+.select-btn:hover { background: var(--glass-hover); }
+.is-open .select-btn { border-color: var(--hairline-strong); }
+.select-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Chevron drawn in CSS: one more Lucide file would ship on every page for a
+   shape that is two borders. */
+.select-caret {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-right: 1.5px solid var(--on-surface-variant);
+  border-bottom: 1.5px solid var(--on-surface-variant);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.is-open .select-caret { transform: translateY(1px) rotate(225deg); }
+
+.select-menu {
+  position: absolute;
+  top: calc(100% + var(--s-1));
+  left: 0;
+  z-index: 30;
+  min-width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--s-1);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-container);
+  backdrop-filter: blur(var(--blur-overlay));
+  box-shadow: 0 12px 32px var(--scrim);
+}
+
+.select-group {
+  padding: var(--s-2) var(--s-3) var(--s-1);
+  color: var(--on-surface-faint);
+}
+
+.select-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+  padding: var(--s-2) var(--s-3);
+  border: 0;                      /* the UA default button border reads as a box here */
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+}
+
+.select-option:hover, .select-option:focus-visible { background: var(--glass-hover); }
+.select-option.is-on { background: var(--glass-overlay); }
+
+.sat-score {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 1.6rem + 3vw, 3.75rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+}
