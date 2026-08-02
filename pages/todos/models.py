@@ -32,9 +32,16 @@ def list_todos(done=None, tag=None) -> list[dict]:
         params.append(tag)
     if where:
         sql += " WHERE " + " AND ".join(where)
-    # open first, then by due date (nulls last), newest created last
-    sql += " ORDER BY done, due_at IS NULL, due_at, created_at"
+    # open first, then manual order (0 = never dragged), then by due date
+    # (nulls last), newest created last
+    sql += " ORDER BY done, position, due_at IS NULL, due_at, created_at"
     return [to_dict(r) for r in query(sql, params)]
+
+
+def reorder(ids: list[int]) -> None:
+    """Write the given ids as positions 1..n. Ids not listed keep position 0."""
+    for i, todo_id in enumerate(ids, start=1):
+        execute("UPDATE todos SET position = %s WHERE id = %s", (i, int(todo_id)))
 
 
 def list_tags() -> list[str]:

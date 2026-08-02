@@ -27,7 +27,7 @@ def app():
         conn = db.get_db()
         conn.execute("TRUNCATE settings, events, todos, notes, messages, undo_log, "
                      "courses, assignments, grade_history, gpa_courses, gpa_levels, "
-                     "sat_questions, sat_attempts, sat_tests, sat_test_items "
+                     "sat_questions, sat_attempts, sat_tests, sat_test_items, skills "
                      "RESTART IDENTITY CASCADE")
         conn.commit()
     return app

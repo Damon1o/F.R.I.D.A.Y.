@@ -32,6 +32,18 @@ def todos_create():
         return jsonify({"error": str(e)}), 400
 
 
+@todos_bp.route("/api/todos/reorder", methods=["POST"])
+def todos_reorder():
+    ids = (request.get_json(silent=True) or {}).get("ids")
+    if not isinstance(ids, list):
+        return jsonify({"error": "ids must be a list"}), 400
+    try:
+        models.reorder(ids)
+    except (TypeError, ValueError):
+        return jsonify({"error": "ids must be integers"}), 400
+    return "", 204
+
+
 @todos_bp.route("/api/todos/<int:todo_id>", methods=["PATCH"])
 def todos_update(todo_id):
     try:

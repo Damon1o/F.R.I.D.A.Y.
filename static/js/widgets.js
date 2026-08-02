@@ -1,5 +1,26 @@
-// Dashboard widgets: live clock + weather fetch
+// Dashboard widgets: live clock + weather fetch + drag-to-rearrange
 (function () {
+  // ---- Layout: drag cards, remember the order ----
+  // localStorage, not the DB: it is one user's view preference, and a stale
+  // order on a second device is less annoying than a round trip on every drag.
+  function rearrangeable(container, key) {
+    if (!container || !window.dragSort) return;
+    var saved;
+    try { saved = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { saved = []; }
+    // Re-appending only the saved ids leaves cards added since then ahead of
+    // them, which is where a new card should be anyway.
+    saved.forEach(function (id) {
+      var el = container.querySelector('[data-card="' + id + '"]');
+      if (el) container.appendChild(el);
+    });
+    window.dragSort(container, '[data-card]', function (ids) {
+      try { localStorage.setItem(key, JSON.stringify(ids)); } catch (e) { /* order is best-effort */ }
+    });
+  }
+
+  rearrangeable(document.getElementById('widget-bar'), 'friday_widget_order');
+  rearrangeable(document.getElementById('bento'), 'friday_bento_order');
+
   // ---- Live clock ----
   var clockEl = document.querySelector('[data-clock]');
   var clock24 = true;

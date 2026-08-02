@@ -123,6 +123,26 @@ def to_api(limit=None) -> list[dict]:
     return out
 
 
+def truncate_from(message_id: int) -> int | None:
+    """Delete `message_id` and everything after it in the open thread — the rewind
+    behind retry and edit (Spec AD).
+
+    The id must itself belong to the open thread. Ids are global, so a stale tab
+    holding an id from an *earlier* thread would otherwise satisfy `id >= …` for
+    every row of the current one and wipe the whole conversation.
+
+    Because a turn's `tool` rows sort after the assistant row that requested them,
+    they go together — an orphan `tool_call_id` would make the next API call invalid.
+    """
+    thread = current_thread()
+    owned = query("SELECT id FROM messages WHERE id = %s AND thread_id = %s",
+                  (message_id, thread), one=True)
+    if owned:
+        execute("DELETE FROM messages WHERE thread_id = %s AND id >= %s", (thread, message_id))
+    row = query("SELECT MAX(id) AS t FROM messages WHERE thread_id = %s", (thread,), one=True)
+    return row["t"] if row else None
+
+
 def clear() -> None:
     """Delete the open conversation. Other threads are untouched."""
     execute("DELETE FROM messages WHERE thread_id = %s", (current_thread(),))

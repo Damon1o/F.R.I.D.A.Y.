@@ -6,13 +6,47 @@
   var newBtn = document.getElementById('friday-new');
   if (!list || !form) return;
 
-  function bubble(role, text) {
+  // The system prompt asks for plain sentences, but models slip markdown in anyway.
+  // Strip it rather than render it: bubbles are plain text nodes, and voice-web.js speaks
+  // that same textContent — so this keeps "asterisk asterisk" out of the speech too.
+  function plain(text) {
+    return String(text || '')
+      .replace(/```[\s\S]*?```/g, '')                 // fenced code reads as noise either way
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')      // links and images keep their label
+      .replace(/(\*\*|__)(.*?)\1/g, '$2')
+      .replace(/(^|[\s(])[*_]([^*_\n]+)[*_]/g, '$1$2')
+      .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+      .replace(/^\s*[-*+]\s+/gm, '')
+      .replace(/^\s*>\s?/gm, '')
+      .trim();
+  }
+
+  function bubble(role, text, id) {
     var el = document.createElement('div');
     el.className = 'friday-msg ' + role;
-    el.textContent = text || '';
+    if (id) el.dataset.id = id;
+    el.textContent = role === 'assistant' ? plain(text) : (text || '');
     list.appendChild(el);
     list.scrollTop = list.scrollHeight;
     return el;
+  }
+
+  // Spec AE — which tools ran, collapsed. Names and argument echoes only; tool
+  // results never reach the client, so nothing untrusted is rendered here.
+  function toolNote(el, calls) {
+    if (!calls || !calls.length) return;
+    var d = document.createElement('details');
+    d.className = 'friday-tools';
+    var s = document.createElement('summary');
+    s.textContent = 'Used ' + calls.length + (calls.length === 1 ? ' tool' : ' tools');
+    d.appendChild(s);
+    calls.forEach(function (c) {
+      var p = document.createElement('p');
+      p.textContent = c.summary ? c.name + ' — ' + c.summary : c.name;
+      d.appendChild(p);
+    });
+    el.appendChild(d);
   }
 
   // History pages backwards: open on the last PAGE turns, fetch older on demand.
@@ -32,9 +66,9 @@
         btn.remove();
         var anchor = list.firstChild;
         rows.forEach(function (m) {
-          var el = document.createElement('div');
+          var el = document.createElement('div');   // not bubble(): that appends and scrolls
           el.className = 'friday-msg ' + m.role;
-          el.textContent = m.content || '';
+          el.textContent = m.role === 'assistant' ? plain(m.content) : (m.content || '');
           list.insertBefore(el, anchor);
         });
         if (rows.length) {
@@ -50,18 +84,34 @@
 
   function render(messages) {
     list.innerHTML = '';
-    messages.forEach(function (m) { bubble(m.role, m.content); });
+    var lastUser = '';
+    var lastUserId = null;
+    messages.forEach(function (m) {
+      var el = bubble(m.role, m.content, m.id);
+      if (m.role === 'user') { lastUser = m.content; lastUserId = m.id; }
+      else toolNote(el, m.tools);
+    });
     if (messages.length) {
       oldestId = messages[0].id;
       if (messages.length === PAGE) list.insertBefore(olderButton(), list.firstChild);
     }
+    var last = messages[messages.length - 1];
+    if (last && last.role === 'assistant' && lastUser) {
+      turnControls(list.lastElementChild, lastUser, lastUserId);
+    }
   }
 
   async function loadHistory() {
+    // Skeleton (Spec AF): the panel is otherwise a blank box until this resolves,
+    // which on a cold serverless call reads as "empty conversation".
+    window.skeletonRows(list, 3, 52);
     try {
       var res = await fetch('/api/friday/history?limit=' + PAGE);
       render(await res.json());
-    } catch (e) { /* offline: leave panel empty */ }
+    } catch (e) {
+      list.innerHTML = '';                     // never leave a skeleton shimmering
+      window.toast('Could not load the conversation.', { error: true });
+    }
   }
 
   function drain(buf, onFrame) {
@@ -78,17 +128,114 @@
     return rest;
   }
 
+  // Interrupt: the send button turns into a stop button while a reply streams, Esc does
+  // the same, and voice barge-in calls window.fridayStop(). Aborting the fetch closes the
+  // SSE stream, which ends the server generator — it persists whatever was said already.
+  var sendBtn = document.getElementById('friday-send');
+  var inflight = null;
+
+  // Always fires the event — speech outlives the stream, so a stop after the last token
+  // still has something to cut. Returns whether a reply was actually being streamed.
+  window.fridayStop = function () {
+    var streaming = !!inflight;
+    if (inflight) { inflight.abort(); inflight = null; }
+    window.dispatchEvent(new Event('friday-interrupt'));   // voice-web.js cuts the speech
+    return streaming;
+  };
+
+  function busy(on) {
+    inflight = on || null;
+    if (sendBtn) {
+      sendBtn.classList.toggle('is-busy', !!on);
+      sendBtn.setAttribute('aria-label', on ? 'Stop' : 'Send');
+    }
+  }
+
+  // ---- Retry / edit the last turn (Spec AD) --------------------------------
+  // The rewind is server-side: the rows have to be gone before the turn is replayed,
+  // or the model sees its own discarded answer in the replayed context.
+  async function truncate(id) {
+    if (!id) return false;
+    try {
+      var res = await fetch('/api/friday/history/' + id, { method: 'DELETE' });
+      if (!res.ok) throw new Error(res.status);
+      return true;
+    } catch (e) {
+      window.toast('Could not rewind that turn.', { error: true });
+      return false;
+    }
+  }
+
+  function actionBtn(label, run) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'friday-turn-btn label-mono';
+    b.textContent = label;
+    b.addEventListener('click', run);
+    return b;
+  }
+
+  // Attached to the final assistant bubble only, and cleared when a new turn starts.
+  function turnControls(el, userText, userId) {
+    if (!el || !el.dataset.id) return;
+    var bar = document.createElement('div');
+    bar.className = 'friday-turn-actions';
+    bar.appendChild(actionBtn('Retry', async function () {
+      if (inflight) return;                       // mid-stream retry is ambiguous
+      if (await truncate(el.dataset.id)) { el.remove(); send(userText); }
+    }));
+    bar.appendChild(actionBtn('Edit', async function () {
+      if (inflight) return;
+      if (!userId || !await truncate(userId)) return;
+      var prev = el.previousElementSibling;
+      el.remove();
+      if (prev && prev.classList.contains('user')) prev.remove();
+      input.value = userText;
+      input.focus();
+    }));
+    el.appendChild(bar);
+  }
+
+  function clearTurnControls() {
+    list.querySelectorAll('.friday-turn-actions').forEach(function (el) { el.remove(); });
+  }
+
+  // Drafts are inert until this button is clicked. It posts the draft id and nothing
+  // else, so the mail that goes out is the mail shown here.
+  function confirmSend(draft) {
+    var el = bubble('assistant', '');
+    el.classList.add('friday-confirm');
+    var text = document.createElement('p');
+    text.textContent = 'Send to ' + draft.to + ' — "' + (draft.subject || '') + '"\n\n' + (draft.preview || '');
+    var btn = document.createElement('button');
+    btn.className = 'btn-primary';
+    btn.textContent = 'Send it';
+    btn.addEventListener('click', async function () {
+      btn.disabled = true;
+      var res = await fetch('/api/mail/send/' + encodeURIComponent(draft.draft_id), { method: 'POST' });
+      btn.textContent = res.ok ? 'Sent' : 'Send failed';
+    });
+    el.appendChild(text);
+    el.appendChild(btn);
+    list.scrollTop = list.scrollHeight;
+  }
+
   async function send(text) {
     input.disabled = true;
+    clearTurnControls();                 // they belong to the last turn, not this one
     bubble('user', text);
     var pending = bubble('assistant', '');
     pending.classList.add('is-pending');
     var streamed = '';
+    var calls = [];
+    var ctrl = new AbortController();
+    busy(ctrl);
     try {
       var res = await fetch('/api/friday/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text }),
+        signal: ctrl.signal,
       });
       var reader = res.body.getReader();
       var decoder = new TextDecoder();
@@ -102,7 +249,11 @@
             if (!streamed) pending.textContent = payload.text;
           } else if (event === 'token') {
             streamed += payload.text;
-            pending.textContent = streamed;
+            pending.textContent = plain(streamed);   // half-written markers clear once closed
+          } else if (event === 'tool') {
+            calls.push(payload);
+          } else if (event === 'action' && payload.type === 'confirm_send') {
+            confirmSend(payload);
           } else if (event === 'error') {
             streamed = payload.text;
             pending.textContent = streamed;
@@ -112,22 +263,67 @@
         });
       }
     } catch (e) {
-      pending.textContent = 'F.R.I.D.A.Y. is unreachable.';
-      pending.classList.add('is-error');
+      // An abort is the user stopping on purpose: keep the partial reply as it stands.
+      // is-stopped keeps voice-web.js from speaking a reply that was just cut off.
+      if (e.name === 'AbortError') {
+        pending.classList.add('is-stopped');
+      } else {
+        pending.textContent = 'F.R.I.D.A.Y. is unreachable.';
+        pending.classList.add('is-error');
+      }
     } finally {
+      busy(null);
+      // The stream can end with nothing rendered (a buffered/dropped connection, a
+      // timed-out function) even though the turn ran and the reply is in the database.
+      // Ask history for it rather than leaving the turn looking unanswered.
+      if (!streamed && !pending.classList.contains('is-error')) await recoverReply(pending);
       pending.classList.remove('is-pending');
       if (!pending.textContent) pending.remove();
+      else {
+        toolNote(pending, calls);
+        // The bubble was built client-side and has no stored id yet; ask history for
+        // the one that was just persisted so Retry/Edit have something to rewind to.
+        await tagLastTurn(pending, text);
+      }
       input.disabled = false;
       input.focus();
     }
   }
 
+  // Stamp the freshly streamed bubble with its stored id and attach Retry/Edit.
+  async function tagLastTurn(el, userText) {
+    try {
+      var res = await fetch('/api/friday/history?limit=2');
+      var rows = await res.json();
+      var reply = rows[rows.length - 1];
+      var question = rows[rows.length - 2];
+      if (!reply || reply.role !== 'assistant') return;
+      el.dataset.id = reply.id;
+      turnControls(el, userText, question && question.role === 'user' ? question.id : null);
+    } catch (e) { /* offline: the turn simply has no controls */ }
+  }
+
+  // Last stored assistant turn, if it is newer than the last one on screen.
+  async function recoverReply(pending) {
+    try {
+      var res = await fetch('/api/friday/history?limit=2');
+      var rows = await res.json();
+      var last = rows[rows.length - 1];
+      if (last && last.role === 'assistant' && last.content) pending.textContent = plain(last.content);
+    } catch (e) { /* offline: the empty bubble is removed below */ }
+  }
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (window.fridayStop()) return;      // the send button is a stop button mid-reply
     var text = input.value.trim();
     if (!text || input.disabled) return;
     input.value = '';
     send(text);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') window.fridayStop();
   });
 
   // Attachments: the server extracts text, the text goes out as a normal turn.
@@ -150,7 +346,11 @@
         if (!res.ok) return bubble('assistant', data.error || 'Upload failed').classList.add('is-error');
         var question = input.value.trim() || 'Summarise this file.';
         input.value = '';
-        send(question + '\n\n--- ' + data.name + ' ---\n' + data.text);
+        // Say what was actually read, so a truncated summary can't sound complete.
+        var marker = data.truncated
+          ? '[Attachment: ' + data.name + ' — first ' + data.chars + ' of ' + data.total_chars + ' characters, truncated]'
+          : '[Attachment: ' + data.name + ']';
+        send(question + '\n\n' + marker + '\n' + data.text);
       } catch (e) {
         note.remove();
         bubble('assistant', 'Upload failed.').classList.add('is-error');
@@ -180,10 +380,11 @@
     view.innerHTML = '';
 
     if (!items.length) {
-      var empty = document.createElement('p');
-      empty.className = 'empty label-mono';
-      empty.textContent = 'No earlier conversations';
-      view.appendChild(empty);
+      window.emptyState(view, {
+        icon: 'message-square',
+        title: 'No past conversations',
+        hint: 'This is your first one.',
+      });
       return;
     }
 
@@ -305,7 +506,16 @@
     var box = drawer.querySelector('.scroll-list-container');
 
     async function loadThreads() {
-      var res = await fetch('/api/friday/threads');
+      window.skeletonRows(box.querySelector('.scroll-list'), 4, 36);
+      var res;
+      try {
+        res = await fetch('/api/friday/threads');
+        if (!res.ok) throw new Error(res.status);
+      } catch (e) {
+        box.querySelector('.scroll-list').innerHTML = '';
+        window.toast('Could not load past conversations.', { error: true });
+        return;
+      }
       var data = await res.json();
       animatedList(box, data.threads.map(function (t) {
         return {

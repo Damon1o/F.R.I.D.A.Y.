@@ -23,8 +23,15 @@ def undo_last():
 
 
 def _sse(frames):
+    # The first frame carries 2 KB of comment padding: anything between here and the
+    # browser that buffers small writes (Windows AV shims, proxies) otherwise holds the
+    # early frames until more data arrives, which reads as "the reply never came" until
+    # a later turn pushes it out. Padding rides along with the first real frame rather
+    # than being its own chunk, so nothing waits on an extra read to start the turn.
+    pad = ": " + " " * 2048 + "\n\n"
     for event, payload in frames:
-        yield f"event: {event}\ndata: {json.dumps(payload)}\n\n"
+        yield f"{pad}event: {event}\ndata: {json.dumps(payload)}\n\n"
+        pad = ""
 
 
 @friday_bp.route("/api/friday/message", methods=["POST"])
@@ -54,10 +61,11 @@ def upload():
     if f is None or not f.filename:
         return jsonify({"error": "no file"}), 400
     try:
-        text = extract(f.filename, f.read())
+        text, total = extract(f.filename, f.read())
     except UnsupportedFile as e:
         return jsonify({"error": str(e)}), 400
-    return jsonify({"name": f.filename, "chars": len(text), "text": text})
+    return jsonify({"name": f.filename, "chars": len(text), "total_chars": total,
+                    "text": text, "truncated": total > len(text)})
 
 
 @friday_bp.route("/api/friday/history", methods=["GET"])
@@ -67,10 +75,26 @@ def history():
     before = request.args.get("before", type=int)
     rows = messages.history(limit=limit, before_id=before,
                             thread_id=request.args.get("thread", type=int))
-    shown = [{"id": m["id"], "role": m["role"], "content": m["content"]}
-             for m in rows
-             if m["content"] and m["role"] in ("user", "assistant")]
+    # Spec AE — a reply's tool notes are rebuilt from the stored tool_calls, so they
+    # survive a reload without a new column. Tool *results* are never projected:
+    # they are untrusted third-party text and belong nowhere near the UI.
+    tools: list[dict] = []
+    shown = []
+    for m in rows:
+        if m["role"] == "assistant" and m["tool_calls"]:
+            tools.extend(agent.tool_notes(json.loads(m["tool_calls"])))
+        if m["content"] and m["role"] in ("user", "assistant"):
+            shown.append({"id": m["id"], "role": m["role"], "content": m["content"],
+                          "tools": tools if m["role"] == "assistant" else []})
+            tools = []
     return jsonify(shown)
+
+
+@friday_bp.route("/api/friday/history/<int:message_id>", methods=["DELETE"])
+def truncate(message_id):
+    """Spec AD — drop this message and every later one in the open thread. This is
+    the rewind behind retry (drop the reply) and edit (drop the question too)."""
+    return jsonify({"last": messages.truncate_from(message_id)})
 
 
 @friday_bp.route("/api/friday/threads", methods=["GET"])

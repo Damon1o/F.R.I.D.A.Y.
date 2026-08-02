@@ -21,8 +21,12 @@ class UnsupportedFile(Exception):
     pass
 
 
-def extract(filename: str, data: bytes) -> str:
-    """Return the file's text, truncated to MAX_CHARS. Raises UnsupportedFile."""
+def extract(filename: str, data: bytes) -> tuple[str, int]:
+    """Return (text truncated to MAX_CHARS, total chars before truncation).
+
+    Raises UnsupportedFile. The total matters: a 40-page report summarised from
+    its first 8,000 characters reads as complete unless the caller says otherwise.
+    """
     if len(data) > MAX_BYTES:
         raise UnsupportedFile("file is larger than 2 MB")
 
@@ -41,7 +45,7 @@ def extract(filename: str, data: bytes) -> str:
     text = text.strip()
     if not text:
         raise UnsupportedFile("no readable text in that file")
-    return text[:MAX_CHARS]
+    return text[:MAX_CHARS], len(text)
 
 
 def _pdf(data: bytes) -> str:

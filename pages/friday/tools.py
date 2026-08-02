@@ -13,7 +13,9 @@ from pages.todos import models as todos
 from pages.notes import models as notes
 from pages.search import models as search
 from pages.music import get_provider
-from pages.friday import facts, sms, weather
+from pages.mail import get_mail
+from pages.skills import models as skills
+from pages.friday import facts, search_web, sms, weather
 
 _DT = "ISO-8601 datetime, e.g. 2026-07-24T15:00:00. Assume the user's local time."
 _RRULE = "RFC-5545 RRULE for repeats, e.g. FREQ=WEEKLY;BYDAY=MO,WE,FR. Omit for one-off events."
@@ -120,6 +122,11 @@ TOOLS = [
     _fn("remember", "Store a free-form note/fact the user wants remembered.", {
         "text": {"type": "string"},
     }, ["text"]),
+    _fn("take_note", "Store the user's words verbatim as a note. Use when they say "
+                     "'take a note', 'dictate', or 'remember this exactly'. Do not summarise, "
+                     "rephrase, shorten, or turn it into a todo — store the text as spoken.", {
+        "text": {"type": "string", "description": "The user's words, unedited."},
+    }, ["text"]),
     _fn("recall", "Search remembered notes for ones matching a query.", {
         "query": {"type": "string"},
     }, ["query"]),
@@ -127,10 +134,46 @@ TOOLS = [
     _fn("delete_note", "Delete a remembered note by id.", {
         "note_id": {"type": "integer"},
     }, ["note_id"]),
-    _fn("search_all", "Search across events, todos, and notes at once.", {
+    # Mail: read and draft only. `send_email` is deliberately absent — sending goes
+    # through POST /api/mail/send/<draft_id> after the user clicks Confirm.
+    _fn("list_unread", "List the user's unread emails (sender, subject, snippet).", {
+        "count": {"type": "integer", "description": "How many, 1-20. Default 10."},
+    }, []),
+    _fn("read_message", "Read one email's plain-text body by id.", {
+        "message_id": {"type": "string"},
+    }, ["message_id"]),
+    _fn("search_mail", "Search the user's mailbox with a Gmail query, e.g. 'from:kate newer_than:7d'.", {
+        "query": {"type": "string"},
+        "count": {"type": "integer", "description": "How many, 1-20. Default 10."},
+    }, ["query"]),
+    _fn("draft_email", "Create an unsent draft. The user confirms before anything is sent.", {
+        "to": {"type": "string", "description": "Recipient email address."},
+        "subject": {"type": "string"},
+        "body": {"type": "string"},
+    }, ["to", "subject", "body"]),
+    _fn("draft_reply", "Draft a reply in an existing thread. The user confirms before sending.", {
+        "thread_id": {"type": "string"},
+        "to": {"type": "string", "description": "Recipient email address."},
+        "subject": {"type": "string"},
+        "body": {"type": "string"},
+    }, ["thread_id", "to", "body"]),
+    _fn("search_web", "Search the live web for current facts, news, prices, opening hours. "
+                      "Use when the answer could have changed since training.", {
+        "query": {"type": "string"},
+        "count": {"type": "integer", "description": "Results to return, 1-10. Default 5."},
+    }, ["query"]),
+    _fn("search_all", "Search across the user's own events, todos, and notes at once.", {
         "query": {"type": "string"},
     }, ["query"]),
     _fn("undo_last", "Undo the last create/edit/delete of an event, todo, or note.", {}, []),
+    # Skills are read/create only: editing and deleting happen on /skills. A model that
+    # rewrites its own instructions mid-conversation is a debugging problem, not a feature.
+    _fn("list_skills", "List the user's saved skills (named instruction blocks).", {}, []),
+    _fn("create_skill", "Save a new skill: a named procedure over existing tools.", {
+        "name": {"type": "string"},
+        "trigger": {"type": "string", "description": "Comma-separated phrases that should load it."},
+        "body": {"type": "string", "description": "The instructions themselves."},
+    }, ["name", "trigger", "body"]),
 ]
 
 
@@ -179,6 +222,11 @@ def dispatch(name: str, args: dict):
             return sms.send_sms(args["to"], args["body"], args.get("channel"))
         if name == "remember":
             return notes.create_note(args["text"])
+        if name == "take_note":
+            # ponytail: dictation ends at the browser's speech-pause cutoff. If long-form
+            # capture matters, switch dictation to the MediaRecorder + /api/voice/stt path,
+            # which records until the user stops it.
+            return notes.create_note(args["text"])
         if name == "recall":
             return notes.search_notes(args["query"])
         if name == "list_notes":
@@ -186,8 +234,25 @@ def dispatch(name: str, args: dict):
         if name == "delete_note":
             ok = notes.delete_note(args["note_id"])
             return {"deleted": ok} if ok else {"error": "note not found"}
+        if name == "list_unread":
+            return get_mail().list_unread(args.get("count", 10))
+        if name == "read_message":
+            return get_mail().read_message(args["message_id"])
+        if name == "search_mail":
+            return get_mail().search(args["query"], args.get("count", 10))
+        if name == "draft_email":
+            return get_mail().create_draft(args["to"], args["subject"], args["body"])
+        if name == "draft_reply":
+            return get_mail().create_draft(args["to"], args.get("subject", "Re:"),
+                                           args["body"], args["thread_id"])
+        if name == "search_web":
+            return search_web.search(args["query"], args.get("count", 5))
         if name == "search_all":
             return search.search(args["query"])
+        if name == "list_skills":
+            return skills.list_skills()
+        if name == "create_skill":
+            return skills.create_skill(args["name"], args["trigger"], args["body"])
         if name == "undo_last":
             return undo.undo(getattr(g, "session_id", "default"))
         return {"error": f"unknown tool {name}"}

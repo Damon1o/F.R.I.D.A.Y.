@@ -147,3 +147,34 @@
   --dur-base: 220ms;
   --dur-slow: 420ms;
 }
+
+/* ---- Density (Spec AH) ----
+   Compact rescales the spacing rhythm only. Type is untouched: this buys rows on
+   screen, not smaller text — the browser's own zoom does that better.
+
+   Deliberately NOT overridden: the week grid's hour height. calendar-week.js
+   positions chips, the now-line, and its initial scroll at 1px per minute
+   (`line.style.top = nowMinutes() + 'px'`), so changing that scale here would put
+   every event in the wrong slot. */
+:root[data-density='compact'] {
+  --s-1: 3px;
+  --s-2: 6px;
+  --s-3: 9px;
+  --s-4: 12px;
+  --s-5: 15px;
+  --s-6: 18px;
+  --s-8: 24px;
+  --s-10: 30px;
+  --s-12: 36px;
+  --topbar-h: 52px;
+}
+
+/* Coarse pointers keep a real tap target regardless of density. */
+@media (pointer: coarse) {
+  :root[data-density='compact'] .icon-btn,
+  :root[data-density='compact'] .btn-primary,
+  :root[data-density='compact'] .btn-ghost {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

@@ -22,27 +22,27 @@
   <form class="quick-add" data-quick="todo">
     <input name="title" placeholder="Add a task and press Enter" required autocomplete="off">
     <input name="due_at" type="datetime-local" aria-label="Due date">
-    <button class="btn-primary" type="submit">{{ icon('plus', 16) }} Add</button>
   </form>
 
-  <ul class="task-list" id="todos-list">
+  <ul class="task-list list-condensed" id="todos-list">
     {% for t in open_todos %}
     <li data-id="{{ t.id }}">
-      <button class="check" data-check aria-label="Mark complete">{{ icon('check', 14) }}</button>
+      <span class="grip" aria-hidden="true">{{ icon('grip-vertical', 14) }}</span>
       <span class="task-title">{{ t.title }}</span>
       {% if t.due_at %}<span class="task-due">{{ t.due_at[:16].replace('T', ' ') }}</span>{% endif %}
-      <button class="icon-btn danger" data-delete aria-label="Delete">{{ icon('trash-2', 16) }}</button>
     </li>
     {% else %}
-    <li class="empty">No open tasks. Say &ldquo;Hey Friday, add a task&rdquo; or type one above.</li>
+    <li class="empty-state">
+      {{ icon('circle-check-big', 24) }}
+      <p class="empty-title">Nothing to do</p>
+      <p class="empty-hint">Add a task above, right-click for options, or ask F.R.I.D.A.Y. to.</p>
+    </li>
     {% endfor %}
 
     {% for t in done_todos %}
     <li data-id="{{ t.id }}" class="is-done">
-      <button class="check checked" data-check aria-label="Mark incomplete">{{ icon('check', 14) }}</button>
       <span class="task-title">{{ t.title }}</span>
       {% if t.due_at %}<span class="task-due">{{ t.due_at[:16].replace('T', ' ') }}</span>{% endif %}
-      <button class="icon-btn danger" data-delete aria-label="Delete">{{ icon('trash-2', 16) }}</button>
     </li>
     {% endfor %}
   </ul>
@@ -50,5 +50,6 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/dragsort.js') }}"></script>
 <script src="{{ url_for('static', filename='js/todos.js') }}"></script>
 {% endblock %}

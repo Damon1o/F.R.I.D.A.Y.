@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Skills · F.R.I.D.A.Y.{% endblock %}
+{% block topbar %}Skills{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="display">Skills</h1>
+    <p class="subtle">Instructions F.R.I.D.A.Y. loads only when a trigger phrase is in your message.</p>
+  </div>
+  <span class="tag">{{ skills | length }} defined</span>
+</section>
+
+{% if error %}<p class="subtle">{{ error }}</p>{% endif %}
+
+<section class="card">
+  {# Toggle and delete live in the right-click menu; the forms stay so the menu
+     has something to submit and the page still works without JS. #}
+  <ul class="task-list" id="skills-list">
+    {% for s in skills %}
+    <li data-enabled="{{ 1 if s.enabled else 0 }}">
+      <span class="task-title">{{ s.name }}{% if not s.enabled %} — off{% endif %}
+        <span class="subtle">{{ s.trigger }}</span>
+      </span>
+      <span class="task-due">used {{ s.used_count }}×</span>
+      <form method="post" action="{{ url_for('skills.skills_toggle', skill_id=s.id) }}" data-toggle>
+        <button class="icon-btn" aria-label="Toggle">{{ icon('zap', 16) }}</button>
+      </form>
+      <form method="post" action="{{ url_for('skills.skills_delete', skill_id=s.id) }}" data-delete>
+        <button class="icon-btn danger" aria-label="Delete">{{ icon('trash-2', 16) }}</button>
+      </form>
+    </li>
+    {% else %}
+    <li class="empty-state">
+      {{ icon('zap', 24) }}
+      <p class="empty-title">No skills yet</p>
+      <p class="empty-hint">A skill is a procedure over tools F.R.I.D.A.Y. already has.
+        Right-click the list for options.</p>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card">
+  <form method="post" action="{{ url_for('skills.skills_create') }}" class="stack" id="skill-add">
+    <label>Name<input name="name" required></label>
+    <label>Trigger phrases<input name="trigger" required
+        placeholder="plan my week, week ahead"></label>
+    <label>Instructions<textarea name="body" rows="5" required></textarea></label>
+    <button class="btn" type="submit"><span>Save skill</span></button>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/skills.js') }}"></script>
+{% endblock %}

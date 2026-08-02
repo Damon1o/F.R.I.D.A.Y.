@@ -71,7 +71,34 @@
     window.speechSynthesis.onvoiceschanged = pickVoice; // Chrome loads the list async
   }
 
+  // Mobile (iOS Safari, Android Chrome) refuses speak() unless synthesis was first started
+  // inside a user gesture. Replies are spoken from a MutationObserver, which never is — so
+  // prime the engine with a silent utterance on the first touch/click and it stays unlocked.
+  if (window.speechSynthesis) {
+    var unlock = function () {
+      document.removeEventListener('touchend', unlock, true);
+      document.removeEventListener('click', unlock, true);
+      var u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+    };
+    document.addEventListener('touchend', unlock, true);
+    document.addEventListener('click', unlock, true);
+  }
+
+  // Both engines spell dotted acronyms out letter by letter ("F. R. I. D. A. Y."). Strip the
+  // dots so they're read as a word, with a map for the ones that still come out wrong.
+  var SAY_AS = { FRIDAY: 'Friday', EG: 'for example', IE: 'that is', ETC: 'etcetera' };
+
+  function sayable(text) {
+    return String(text || '').replace(/\b(?:[A-Za-z]\.){2,}[A-Za-z]?\b/g, function (m) {
+      var word = m.replace(/\./g, '');
+      return SAY_AS[word.toUpperCase()] || word;
+    });
+  }
+
   function speak(text, done) {
+    text = sayable(text);
     if (!text) { if (done) done(); return; }
     offline ? speakOffline(text, done) : speakWeb(text, done);
   }
@@ -79,6 +106,7 @@
   function speakWeb(text, done) {
     if (!window.speechSynthesis) { if (done) done(); return; }
     window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();   // iOS parks the queue paused after a background/cancel
     var utt = new SpeechSynthesisUtterance(text);
     if (voice) utt.voice = voice;
     utt.rate = 0.95;
@@ -87,6 +115,16 @@
     if (done) utt.onend = utt.onerror = function () { done(); };
     window.speechSynthesis.speak(utt);
   }
+
+  // Interrupt — stop button, Esc, or voice barge-in. Cuts the reply mid-sentence on
+  // either engine. Silent when nothing is speaking, so callers needn't check first.
+  function stopSpeaking() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (player) { player.pause(); player = null; }
+    window.fridaySpeaking = false;
+  }
+
+  window.addEventListener('friday-interrupt', stopSpeaking);
 
   var player = null;
 
@@ -127,7 +165,8 @@
       muts.forEach(function (m) {
         if (m.type === 'attributes' && m.target.classList &&
           m.target.classList.contains('assistant') &&
-          !m.target.classList.contains('is-pending')) {
+          !m.target.classList.contains('is-pending') &&
+          !m.target.classList.contains('is-stopped')) {   // interrupted: don't read it back
           speak(m.target.textContent);
         }
       });

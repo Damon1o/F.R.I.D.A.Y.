@@ -49,6 +49,7 @@
       ('notes.notes_page', 'file-text', 'Notes'),
       ('friday.friday_page', 'message-square', 'Assistant'),
       ('music.music_page', 'music', 'Music'),
+      ('skills.skills_page', 'zap', 'Skills'),
       ] %}
 
       {% set edu_items = [
@@ -131,9 +132,22 @@
     <div class="rail-scrim" id="rail-scrim" aria-hidden="true"></div>
   </div>
 
+  {# ================= Command palette (Ctrl/Cmd+K) ================= #}
+  <div class="palette-scrim" id="palette" hidden>
+    <div class="palette glass" role="dialog" aria-modal="true" aria-label="Command palette">
+      <input id="palette-input" type="text" autocomplete="off" spellcheck="false" role="combobox"
+        placeholder="Jump to a page, event, task, note…" aria-controls="palette-list" aria-expanded="true">
+      <div class="palette-list" id="palette-list" role="listbox"></div>
+    </div>
+  </div>
+
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
   <script src="{{ url_for('static', filename='js/cursor.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/palette.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/shortcuts.js') }}"></script>
   <script src="{{ url_for('static', filename='js/friday.js') }}"></script>
   <script src="{{ url_for('static', filename='js/voice-web.js') }}"></script>
   {# onnxruntime is injected by wakeword.js on first use — see loadOrt(). #}

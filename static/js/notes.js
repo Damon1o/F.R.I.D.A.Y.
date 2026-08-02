@@ -5,12 +5,17 @@
   var sentinel = document.getElementById('notes-more');
   if (!list) return;
 
-  list.addEventListener('click', async function (e) {
-    var li = e.target.closest('li[data-id]');
-    if (!li || !e.target.closest('[data-delete]')) return;
-    var res = await fetch('/api/notes/' + li.dataset.id, { method: 'DELETE' });
-    if (res.ok || res.status === 204) li.remove();
-    else alert('Delete failed');
+  window.ctxMenu.bind(list, function (target) {
+    var li = target.closest('li[data-id]');
+    if (!li) return null;
+    return [{
+      label: 'Delete', danger: true, run: async function () {
+        li.hidden = true;                               // optimistic (Spec AC)
+        var res = await fetch('/api/notes/' + li.dataset.id, { method: 'DELETE' });
+        if (res.ok || res.status === 204) li.remove();
+        else { li.hidden = false; window.toast('Could not delete that note.', { error: true }); }
+      },
+    }];
   });
 
   if (!sentinel) return;
@@ -28,9 +33,7 @@
     var when = document.createElement('span');
     when.className = 'task-due';
     when.textContent = (n.created_at || '').slice(0, 16).replace('T', ' ');
-    // Clone a server-rendered button so the Lucide SVG comes along — no glyphs.
-    var del = list.querySelector('[data-delete]').cloneNode(true);
-    li.append(text, when, del);
+    li.append(text, when);
     return li;
   }
 
@@ -40,7 +43,7 @@
     try {
       var res = await fetch('/api/notes?limit=' + size + '&offset=' + loaded);
       var rows = await res.json();
-      rows.forEach(function (n) { list.appendChild(row(n)); });
+      rows.forEach(function (n) { list.insertBefore(row(n), sentinel); });
       loaded += rows.length;
       if (loaded >= total || !rows.length) sentinel.remove();
     } finally {
@@ -51,5 +54,5 @@
   if (loaded >= total) { sentinel.remove(); return; }
   new IntersectionObserver(function (entries) {
     if (entries[0].isIntersecting) more();
-  }).observe(sentinel);
+  }, { root: list }).observe(sentinel);
 })();

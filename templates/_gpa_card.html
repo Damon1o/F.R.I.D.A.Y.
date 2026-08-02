@@ -115,7 +115,7 @@
      current and next enrollment. Weight is the transcript's Weight column. #}
   <details class="gpa-panel" id="gpa-add-panel">
     <summary>
-      {{ icon('plus', 16) }}<span>Add a course Campus doesn't have</span>
+      <span>Add a course Campus doesn't have</span>
       <em class="faint">8th grade, summer, transfers</em>
     </summary>
     <form class="gpa-add" id="gpa-add">
@@ -136,7 +136,7 @@
       <label class="field">Weight
         <input name="credits" type="number" step="0.25" value="1">
       </label>
-      <button class="btn-primary" type="submit">{{ icon('plus', 16) }}<span>Add</span></button>
+      <button class="btn-primary" type="submit"><span>Save course</span></button>
     </form>
     <datalist id="gpa-years-known">
       {% for y in gpa.years %}<option value="{{ y.year }}"></option>{% endfor %}

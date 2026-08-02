@@ -5,18 +5,28 @@
 {% block content %}
 <section class="page-head cal-head">
   <div class="cal-nav">
+    <button class="btn-ghost" id="cal-back" type="button" hidden>{{ icon('chevron-left', 16) }} Month</button>
     <h1 class="display" id="cal-label">Month</h1>
-    <button class="icon-btn" id="cal-prev" aria-label="Previous month">{{ icon('chevron-left', 18) }}</button>
-    <button class="icon-btn" id="cal-next" aria-label="Next month">{{ icon('chevron-right', 18) }}</button>
+    <button class="icon-btn" id="cal-prev" aria-label="Previous">{{ icon('chevron-left', 18) }}</button>
+    <button class="icon-btn" id="cal-next" aria-label="Next">{{ icon('chevron-right', 18) }}</button>
   </div>
   <button class="btn-primary" id="cal-today" type="button">Today</button>
 </section>
 
-<section class="card">
+<section class="card" id="cal-month">
   <div class="cal-weekdays">
     {% for d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}<span>{{ d }}</span>{% endfor %}
   </div>
   <div class="cal-grid" id="cal-grid"><!-- days rendered by calendar.js --></div>
+</section>
+
+{# ---- Week view (rendered by calendar-week.js) ---- #}
+<section class="card cal-week" id="cal-week" hidden>
+  <div class="cal-week-head" id="cal-week-head"></div>
+  <div class="cal-allday" id="cal-allday"></div>
+  <div class="cal-hours" id="cal-hours">
+    <div class="cal-hours-inner" id="cal-hours-inner"></div>
+  </div>
 </section>
 
 {# ---- Event modal (add/edit) ---- #}
@@ -31,6 +41,7 @@
       <label>Title <input name="title" required autocomplete="off"></label>
       <label>Start <input name="start_at" type="datetime-local" required></label>
       <label>End <input name="end_at" type="datetime-local"></label>
+      <label class="row-label"><input name="all_day" type="checkbox"> All day</label>
       <label>Location <input name="location" autocomplete="off"></label>
       <label>Notes <textarea name="notes" rows="2"></textarea></label>
       <div class="modal-actions">
@@ -45,5 +56,6 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/calendar-week.js') }}"></script>
 <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
 {% endblock %}

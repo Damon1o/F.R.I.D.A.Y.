@@ -434,6 +434,12 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .icon-btn.is-send { background: var(--primary); color: var(--on-primary); }
 .icon-btn.is-send:hover { opacity: 0.86; background: var(--primary); }
 
+/* Send becomes Stop while a reply streams. Both icons are in the markup; only the
+   matching one is shown, so the button never reflows mid-turn. */
+.icon-btn.is-send .stop-ico,
+.icon-btn.is-send.is-busy .send-ico { display: none; }
+.icon-btn.is-send.is-busy .stop-ico { display: inline-flex; }
+
 .tag, .pill, .chip {
   display: inline-flex;
   align-items: center;
@@ -598,23 +604,9 @@ input[type='range']::-moz-range-thumb {
 .task-due { font-size: var(--text-label); color: var(--on-surface-faint); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .task-list li.is-done .task-title { color: var(--on-surface-faint); text-decoration: line-through; }
 
-.check {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  flex: none;
-  padding: 0;
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-full);
-  background: none;
-  color: transparent;
-  cursor: pointer;
-  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
-}
-
-.check:hover { border-color: var(--primary); }
-.check.checked { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+/* Done tasks carry no grip — they cannot be reordered — so they pay its width
+   in padding instead, or their titles would sit left of the open ones. */
+.task-list li.is-done { padding-left: calc(14px + var(--s-3)); }
 
 /* ---------- 12. Assistant panel ---------- */
 .friday {
@@ -681,6 +673,10 @@ input[type='range']::-moz-range-thumb {
   background: var(--primary);
   color: var(--on-primary);
 }
+
+/* Draft confirmation: the whole send gate is this button. */
+.friday-msg.friday-confirm { display: flex; flex-direction: column; gap: var(--s-3); align-items: flex-start; }
+.friday-msg.friday-confirm p { margin: 0; }
 
 .friday-msg.is-pending { color: var(--on-surface-faint); animation: pulse 2s var(--ease-in-out) infinite; }
 .friday-msg.is-error { color: var(--danger); border-color: var(--danger); }
@@ -763,6 +759,61 @@ input[type='range']::-moz-range-thumb {
 }
 
 .chat-hint { flex: none; text-align: center; color: var(--on-surface-faint); }
+
+/* ---------- 12a. Condensed lists + drag to reorder ---------- */
+/* Long lists get a fixed height and scroll inside the card, so a hundred tasks
+   read the same as five. Same treatment as .sat-scroll: the fade is a mask (no
+   overlay elements to keep in sync) and the entrance is a scroll-driven
+   animation, so there is no observer and no motion library. */
+.list-condensed {
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+  mask-image: linear-gradient(to bottom, transparent, #000 24px,
+                              #000 calc(100% - 24px), transparent);
+}
+
+.list-condensed > li {
+  animation: sat-item-in linear both;
+  animation-timeline: view(block);
+  animation-range: entry 0% cover 16%;
+}
+
+/* The empty state is the whole list — fading it in on scroll would just hide it. */
+.list-condensed > li.empty-state { animation: none; }
+
+/* Grip: the handle for reordering. Invisible until the row is hovered, so a
+   still list stays clean. */
+.grip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  color: var(--on-surface-faint);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+/* Tighten the head's own gap so the grip reads as part of the title, not a word. */
+.card-head h3 .grip { margin-right: calc(var(--s-2) * -1); }
+
+.task-list li:hover .grip,
+.card:hover .grip,
+.grip:focus-visible { opacity: 1; }
+
+@media (hover: none) { .grip { opacity: 1; } }
+
+.grip:active { cursor: grabbing; }
+
+/* The row keeps its slot in the flow while dragging; dimming it is enough to
+   show which one is moving. */
+.is-dragging { opacity: 0.4; }
+.is-dragging * { pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .list-condensed > li { animation: none; }
+}
 
 /* ---------- 12b. Past conversations (AnimatedList, vanilla port) ---------- */
 .chat-history { flex: none; border-bottom: 1px solid var(--hairline); }
@@ -1276,6 +1327,230 @@ input[type='range']::-moz-range-thumb {
 }
 
 .cal-event:hover { background: var(--surface-container-highest); }
+
+/* ---------- 16b. Calendar week view ---------- */
+/* .card is display:flex, which outranks the [hidden] attribute. */
+#cal-month[hidden], #cal-week[hidden], #cal-back[hidden], .ctx-menu[hidden] { display: none; }
+
+/* One px per minute: a block's top and height are its start and duration. */
+.cal-week {
+  --cal-gutter: 56px;
+  flex: 1;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cal-week-head,
+.cal-allday,
+.cal-hours-inner {
+  display: grid;
+  grid-template-columns: var(--cal-gutter) repeat(7, 1fr);
+}
+
+.cal-week-head {
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.cal-wday {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cal-wday-name {
+  font-family: var(--font-display);
+  font-size: var(--text-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--on-surface-faint);
+}
+
+.cal-wday-num {
+  font-family: var(--font-display);
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--on-surface-variant);
+}
+
+.cal-wday.is-today .cal-wday-num {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+.cal-allday {
+  min-height: 34px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.cal-allday-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 2px;
+  border-left: 1px solid var(--hairline);
+  cursor: pointer;
+}
+
+.cal-gutter-label {
+  align-self: center;
+  padding-right: var(--s-2);
+  text-align: right;
+  font-size: var(--text-label);
+  color: var(--on-surface-faint);
+}
+
+.cal-hours {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.cal-hours-inner {
+  position: relative;
+  height: 1440px;
+}
+
+.cal-gutter { position: relative; }
+
+.cal-gutter span {
+  position: absolute;
+  right: var(--s-2);
+  transform: translateY(-50%);
+  font-size: var(--text-label);
+  color: var(--on-surface-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cal-col {
+  position: relative;
+  border-left: 1px solid var(--hairline);
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--hairline) 0 1px,
+    transparent 1px 60px
+  );
+}
+
+.cal-col.is-today { background-color: var(--surface-container-lowest); }
+
+.cal-wev {
+  position: absolute;
+  overflow: hidden;
+  padding: 2px var(--s-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xs);
+  background: var(--surface-container-high);
+  font-size: var(--text-label);
+  line-height: 1.25;
+  cursor: grab;
+  touch-action: none;
+}
+
+.cal-wev:hover { background: var(--surface-container-highest); }
+.cal-wev.is-dragging { cursor: grabbing; opacity: 0.8; z-index: 3; }
+.cal-wev.is-occurrence { cursor: pointer; border-style: dashed; }
+
+.cal-wev-title {
+  display: block;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-wev-time {
+  display: block;
+  color: var(--on-surface-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-wev-grip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.cal-wev.is-allday {
+  position: static;
+  cursor: pointer;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cal-wev.is-draft { z-index: 4; padding: 2px; }
+
+.cal-wev.is-draft input {
+  width: 100%;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--on-surface);
+  font: inherit;
+}
+
+.cal-wev.is-draft input:focus { outline: none; }
+
+.cal-now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--primary);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cal-now::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -2.5px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+}
+
+.ctx-menu {
+  position: fixed;
+  z-index: 70;
+  min-width: 168px;
+  padding: var(--s-1);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--surface-container-high);
+  box-shadow: var(--shadow-2, 0 8px 24px rgb(0 0 0 / 0.28));
+}
+
+.ctx-menu button {
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ctx-menu button:hover { background: var(--surface-container-highest); }
+.ctx-menu button.danger { color: var(--danger); }
+
+.row-label {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-2);
+}
 
 /* ---------- 17. Modal ---------- */
 .modal-backdrop {
@@ -2256,3 +2531,262 @@ select.gpa-level { width: 8.5rem; }
   line-height: 1;
   letter-spacing: var(--tracking-tight);
 }
+
+/* ---------- 24. Toasts (Spec AB) ---------- */
+/* Stacking ledger: rail scrim 40, modal 60, context menu 70, palette 100, toasts 110. */
+.toast-host {
+  position: fixed;
+  right: var(--s-4);
+  bottom: calc(var(--s-4) + env(safe-area-inset-bottom));
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  max-width: min(24rem, calc(100vw - var(--s-8)));
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--glass-overlay);
+  backdrop-filter: blur(var(--blur-overlay));
+  -webkit-backdrop-filter: blur(var(--blur-overlay));
+  color: var(--on-surface);
+  font-size: var(--text-body-sm);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.28);
+  animation: toast-in var(--dur-base) var(--ease-out);
+}
+
+.toast.is-error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.toast-text { flex: 1; }
+.toast-action { flex: none; padding: var(--s-1) var(--s-2); font-size: var(--text-label); }
+.toast-close { flex: none; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(var(--s-2)); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+/* ---------- 25. Empty states (Spec AG) ---------- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-6) var(--s-4);
+  text-align: center;
+  color: var(--on-surface-variant);
+}
+
+.empty-state svg,
+.empty-state img { opacity: 0.5; }
+.empty-title { color: var(--on-surface); font-size: var(--text-body-sm); }
+.empty-hint { color: var(--on-surface-faint); font-size: var(--text-label); }
+.empty-state .btn-primary { margin-top: var(--s-2); }
+
+/* ---------- 26. Skeletons (Spec AF) ---------- */
+.skeleton {
+  background: linear-gradient(90deg,
+      var(--surface-container) 25%,
+      var(--surface-container-high) 37%,
+      var(--surface-container) 63%);
+  background-size: 400% 100%;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--s-2);
+  animation: skeleton-sweep 1.4s ease infinite;
+}
+
+@keyframes skeleton-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background: var(--surface-container); }
+}
+
+/* ---------- 27. Command palette (Spec Z) ---------- */
+.palette-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  padding: 18vh var(--s-4) var(--s-4);
+  background: var(--scrim);
+}
+
+.palette-scrim[hidden] { display: none; }
+
+.palette {
+  width: min(34rem, 100%);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-xl);
+  background: var(--glass-overlay);
+  backdrop-filter: blur(var(--blur-overlay));
+  -webkit-backdrop-filter: blur(var(--blur-overlay));
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.4);
+}
+
+#palette-input {
+  flex: none;
+  padding: var(--s-4);
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--on-surface);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  outline: none;
+}
+
+.palette-list {
+  overflow-y: auto;
+  padding: var(--s-2);
+}
+
+.palette-group {
+  padding: var(--s-2) var(--s-2) var(--s-1);
+  color: var(--on-surface-faint);
+}
+
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-md);
+  color: var(--on-surface-variant);
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+}
+
+.palette-row img { opacity: 0.7; }
+.palette-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.palette-row.is-active {
+  background: var(--glass-hover);
+  color: var(--on-surface);
+}
+
+.palette-row.is-active img { opacity: 1; }
+
+.palette-none {
+  padding: var(--s-4);
+  color: var(--on-surface-faint);
+  font-size: var(--text-body-sm);
+  text-align: center;
+}
+
+/* ---------- 28. Shortcut reference + density (Spec AH) ---------- */
+.setting-row.stack-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s-3);
+}
+
+.setting-row.stack-row .segmented { align-self: flex-start; }
+
+.shortcut-list {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-1) 0;
+  color: var(--on-surface-variant);
+  font-size: var(--text-body-sm);
+}
+
+.shortcut-keys {
+  display: flex;
+  gap: var(--s-1);
+  flex: none;
+  min-width: 7rem;
+}
+
+.shortcut-row kbd {
+  padding: 2px var(--s-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--surface-container);
+  color: var(--on-surface);
+  font-family: var(--font-display);
+  font-size: var(--text-label);
+  line-height: 1.5;
+}
+
+.segmented {
+  display: flex;
+  gap: var(--s-1);
+  padding: var(--s-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+}
+
+.segmented .btn-ghost[aria-pressed="true"] {
+  background: var(--glass-overlay);
+  color: var(--on-surface);
+}
+
+/* ---------- 29. Turn actions + tool disclosure (Specs AD, AE) ---------- */
+.friday-turn-actions {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+/* focus-within, not hover alone: the buttons must be reachable from the keyboard. */
+.friday-msg:hover .friday-turn-actions,
+.friday-turn-actions:focus-within { opacity: 1; }
+
+.friday-turn-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--on-surface-faint);
+  cursor: pointer;
+}
+
+.friday-turn-btn:hover { color: var(--on-surface); }
+
+.friday-tools {
+  margin-top: var(--s-2);
+  color: var(--on-surface-faint);
+  font-size: var(--text-label);
+}
+
+.friday-tools summary {
+  cursor: pointer;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.friday-tools p {
+  padding: var(--s-1) 0 0 var(--s-3);
+  word-break: break-word;
+}
+
+/* Optimistic create: a chip the server has not confirmed yet (Spec AC). */
+.cal-event.is-provisional { opacity: 0.55; }

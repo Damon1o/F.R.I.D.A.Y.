@@ -9,22 +9,22 @@
 </section>
 
 {# ---- Live strip: clock, date, weather ---- #}
-<section class="widget-bar" aria-label="Live status">
-  <div class="widget" data-widget="clock" aria-live="polite">
+<section class="widget-bar" id="widget-bar" aria-label="Live status">
+  <div class="widget" data-card="clock" aria-live="polite">
     <div class="widget-head">
       <span class="widget-icon">{{ icon('clock', 14) }}</span>
       <span class="widget-label">Local time</span>
     </div>
     <div class="widget-value" data-clock>--:--:--</div>
   </div>
-  <div class="widget" data-widget="date">
+  <div class="widget" data-card="date">
     <div class="widget-head">
       <span class="widget-icon">{{ icon('calendar', 14) }}</span>
       <span class="widget-label">Today</span>
     </div>
     <div class="widget-value" data-date>{{ today.strftime('%A, %B %d, %Y') }}</div>
   </div>
-  <div class="widget" data-widget="weather" id="weather-widget">
+  <div class="widget" data-card="weather" id="weather-widget">
     <div class="widget-head">
       <span class="widget-icon">{{ icon('cloud', 14) }}</span>
       <span class="widget-label" data-weather-cond>Loading…</span>
@@ -59,14 +59,17 @@
   </div>
 </section>
 
-<div class="bento">
+<div class="bento" id="bento">
   {# ---- Upcoming ---- #}
-  <section class="card" aria-labelledby="up-h">
+  <section class="card" aria-labelledby="up-h" data-card="upcoming">
     <div class="card-head">
-      <h3 id="up-h">{{ icon('calendar', 18) }} Upcoming</h3>
+      <h3 id="up-h">
+        <span class="grip" data-grip aria-hidden="true">{{ icon('grip-vertical', 14) }}</span>
+        {{ icon('calendar', 18) }} Upcoming
+      </h3>
       <a class="tag" href="{{ url_for('calendar.calendar_page') }}">Calendar {{ icon('arrow-right', 12) }}</a>
     </div>
-    <ul class="agenda">
+    <ul class="agenda list-condensed">
       {% for e in upcoming %}
       <li>
         <span class="agenda-time">{{ 'All day' if e.all_day else e.start_at[5:16].replace('T', ' ') }}</span>
@@ -79,9 +82,12 @@
   </section>
 
   {# ---- Now playing ---- #}
-  <section class="card music-card" aria-labelledby="music-h" id="music-widget">
+  <section class="card music-card" aria-labelledby="music-h" id="music-widget" data-card="music">
     <div class="card-head">
-      <h3 id="music-h">{{ icon('music', 18) }} Now playing</h3>
+      <h3 id="music-h">
+        <span class="grip" data-grip aria-hidden="true">{{ icon('grip-vertical', 14) }}</span>
+        {{ icon('music', 18) }} Now playing
+      </h3>
       <span class="tag" id="music-provider-tag">Spotify</span>
     </div>
     <div class="music-content" id="music-content">
@@ -90,9 +96,12 @@
   </section>
 
   {# ---- Timer ---- #}
-  <section class="card timer-card" aria-labelledby="timer-h">
+  <section class="card timer-card" aria-labelledby="timer-h" data-card="timer">
     <div class="card-head">
-      <h3 id="timer-h">{{ icon('clock', 18) }} Timer</h3>
+      <h3 id="timer-h">
+        <span class="grip" data-grip aria-hidden="true">{{ icon('grip-vertical', 14) }}</span>
+        {{ icon('clock', 18) }} Timer
+      </h3>
     </div>
     <div class="timer-content" id="timer-widget">
       <div class="timer-display" data-timer-display>00:00</div>
@@ -126,6 +135,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/dragsort.js') }}"></script>
 <script src="{{ url_for('static', filename='js/music.js') }}"></script>
 <script src="{{ url_for('static', filename='js/widgets.js') }}"></script>
 <script src="{{ url_for('static', filename='js/timer.js') }}"></script>

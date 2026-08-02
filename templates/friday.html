@@ -57,7 +57,11 @@ and its visibility module bails out when no .friday element exists. #}
     <button class="icon-btn" id="friday-voice" type="button" hidden aria-label="Hold to talk" title="Talk">
       {{ icon('mic', 16) }}
     </button>
-    <button class="icon-btn is-send" type="submit" aria-label="Send">{{ icon('send', 16) }}</button>
+    {# Both icons ship in the button; .is-busy swaps which one shows (see app.css). #}
+    <button class="icon-btn is-send" id="friday-send" type="submit" aria-label="Send">
+      <span class="send-ico">{{ icon('send', 16) }}</span>
+      <span class="stop-ico">{{ icon('square', 16) }}</span>
+    </button>
   </form>
 
   <p class="chat-hint label-mono">Say &ldquo;Hey Friday&rdquo; &middot; searches events, tasks and notes</p>

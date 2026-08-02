@@ -12,22 +12,26 @@
 </section>
 
 <section class="card">
-  <ul class="task-list" id="notes-list">
+  <ul class="task-list list-condensed" id="notes-list">
     {% for n in notes %}
     <li data-id="{{ n.id }}">
       <span class="task-title">{{ n.text }}</span>
       <span class="task-due">{{ n.created_at[:16].replace('T', ' ') }}</span>
-      <button class="icon-btn danger" data-delete aria-label="Delete">{{ icon('trash-2', 16) }}</button>
     </li>
     {% else %}
-    <li class="empty">Nothing yet. Tell F.R.I.D.A.Y. to remember something and it lands here.</li>
+    <li class="empty-state">
+      {{ icon('file-text', 24) }}
+      <p class="empty-title">No notes yet</p>
+      <p class="empty-hint">Notes you write or dictate land here. Right-click one for options.</p>
+    </li>
     {% endfor %}
+    {# Sentinel lives inside the list because the list is its own scroll container. #}
+    {% if total > notes | length %}
+    <li class="load-more label-mono" id="notes-more" data-total="{{ total }}" data-page-size="{{ page_size }}">
+      <i class="pulse" aria-hidden="true"></i>Loading more
+    </li>
+    {% endif %}
   </ul>
-  {% if total > notes | length %}
-  <div class="load-more label-mono" id="notes-more" data-total="{{ total }}" data-page-size="{{ page_size }}">
-    <i class="pulse" aria-hidden="true"></i>Loading more
-  </div>
-  {% endif %}
 </section>
 {% endblock %}
 

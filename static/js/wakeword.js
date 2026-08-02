@@ -12,6 +12,11 @@
   var ORT = '/static/vendor/ort/';
   var MODELS = '/static/vendor/wakeword/';
   var COOLDOWN_MS = 3000;      // ignore detections right after one fires
+  // Barge-in: talking over F.R.I.D.A.Y. cuts her off and opens the mic. The stream below
+  // is captured with echo cancellation on, so her own voice is subtracted out and what's
+  // left above this threshold is the room — i.e. you. Sustained, so a cough can't do it.
+  var BARGE_RMS = 1500;        // int16 scale, same units as the wake-word pipeline
+  var BARGE_MS = 350;
 
   var mic = document.getElementById('friday-voice');
   if (!mic || !navigator.mediaDevices) return;
@@ -67,9 +72,33 @@
       var featBuf = [];                       // last 16 embeddings, 96 floats each
       var busy = false;
 
+      var bargeMs = 0;
+
+      function speaking() {
+        return !!window.fridaySpeaking ||
+          !!(window.speechSynthesis && window.speechSynthesis.speaking);
+      }
+
+      // Called on every audio frame; only does anything while she's talking.
+      function bargeIn(rms, samples) {
+        if (!speaking() || mic.classList.contains('is-live')) { bargeMs = 0; return; }
+        bargeMs = rms >= BARGE_RMS ? bargeMs + samples / 16 : 0;   // 16 samples per ms @ 16 kHz
+        if (bargeMs < BARGE_MS) return;
+        bargeMs = 0;
+        featBuf = [];                       // the interruption isn't a wake word
+        if (window.fridayStop) window.fridayStop();
+        setTimeout(function () { mic.click(); }, 150);   // then listen for the rest of it
+      }
+
       node.onaudioprocess = function (e) {
         var input = e.inputBuffer.getChannelData(0);
-        for (var i = 0; i < input.length; i++) pending.push(input[i] * 32767); // models want int16 scale
+        var sum = 0;
+        for (var i = 0; i < input.length; i++) {
+          var s = input[i] * 32767;         // models want int16 scale
+          pending.push(s);
+          sum += s * s;
+        }
+        bargeIn(Math.sqrt(sum / input.length), input.length);
         while (pending.length >= 1280 && !busy) {
           busy = true;
           step(pending.splice(0, 1280))
