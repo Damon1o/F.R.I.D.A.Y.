@@ -112,9 +112,10 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     from pages.sat.routes import sat_bp
     from pages.mail.routes import mail_bp
     from pages.skills.routes import skills_bp
+    from pages.files.routes import files_bp
 
     for bp in (dashboard_bp, calendar_bp, todos_bp, settings_bp, friday_bp, voice_bp, music_bp, notes_bp, search_bp,
-               grades_bp, sat_bp, mail_bp, skills_bp):
+               grades_bp, sat_bp, mail_bp, skills_bp, files_bp):
         app.register_blueprint(bp)
 
     return app

@@ -14,6 +14,8 @@
   <meta name="apple-mobile-web-app-title" content="F.R.I.D.A.Y.">
   <meta name="theme-color" content="#121414">
   <link rel="icon" href="{{ url_for('static', filename='images/friday.svg') }}" type="image/svg+xml">
+  {# Windows takes the desktop window/taskbar icon from a raster favicon, not the SVG. #}
+  <link rel="icon" href="{{ url_for('static', filename='images/friday.ico') }}" sizes="16x16 32x32 48x48 256x256">
   {# iOS ignores SVG here — needs a raster icon or it screenshots the page instead. #}
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
   <link rel="preload" as="font" type="font/woff2" crossorigin
@@ -76,6 +78,21 @@
         {% endfor %}
       </nav>
 
+      {# Filesystem access exists only in the desktop build — the cloud deploy has no machine to browse. #}
+      {% if config.DESKTOP %}
+      <nav class="nav nav-group" aria-label="This machine">
+        <p class="nav-group-label label-mono">Machine</p>
+        <a class="nav-link {{ 'is-active' if page == 'files.files_page' }}" href="{{ url_for('files.files_page') }}" {{
+          'aria-current=page' if page=='files.files_page' }}>
+          {{ icon('folder', 20) }}<span>Files</span>
+        </a>
+        <a class="nav-link {{ 'is-active' if page == 'files.activity_page' }}"
+          href="{{ url_for('files.activity_page') }}" {{ 'aria-current=page' if page=='files.activity_page' }}>
+          {{ icon('history', 20) }}<span>Activity</span>
+        </a>
+      </nav>
+      {% endif %}
+
       <nav class="nav nav-foot" aria-label="System">
         <a class="nav-link {{ 'is-active' if page == 'settings.settings_page' }}"
           href="{{ url_for('settings.settings_page') }}" {{ 'aria-current=page' if page=='settings.settings_page' }}>
@@ -116,6 +133,11 @@
             aria-label="{{ 'Show' if friday_visible == 'false' else 'Hide' }} F.R.I.D.A.Y. panel"
             aria-expanded="{{ 'false' if friday_visible == 'false' else 'true' }}">{{ icon('message-square', 18)
             }}</button>
+          {% if config.DESKTOP %}
+          <button class="icon-btn danger" id="app-quit" type="button" aria-label="Quit F.R.I.D.A.Y.">
+            {{ icon('x', 18) }}
+          </button>
+          {% endif %}
         </div>
       </header>
 
@@ -153,6 +175,9 @@
   {# onnxruntime is injected by wakeword.js on first use — see loadOrt(). #}
   <script src="{{ url_for('static', filename='js/wakeword.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/update.js') }}" defer></script>
+  {% if config.DESKTOP %}
+  <script>document.getElementById('app-quit').onclick = () => fetch('/api/quit', { method: 'POST' });</script>
+  {% endif %}
   {% block scripts %}{% endblock %}
 </body>
 

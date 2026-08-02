@@ -2790,3 +2790,90 @@ select.gpa-level { width: 8.5rem; }
 
 /* Optimistic create: a chip the server has not confirmed yet (Spec AC). */
 .cal-event.is-provisional { opacity: 0.55; }
+
+/* ================= Files (desktop build) ================= */
+.fs-bar {
+  /* .card is a column flexbox; the bar is the one that runs across. */
+  display: flex;
+  flex-direction: row;
+  gap: var(--s-4);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.fs-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  align-items: center;
+  min-width: 0;
+}
+
+.fs-crumbs button {
+  padding: var(--s-1) var(--s-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--on-surface-variant);
+  font: inherit;
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+}
+
+.fs-crumbs button:hover { color: var(--on-surface); background: var(--glass-hover); }
+/* U+005C — a literal backslash, written as a hex escape so the quote does not end here. */
+.fs-crumbs button + button::before { content: "\005C"; margin-right: var(--s-2); color: var(--on-surface-faint); }
+
+.fs-bar .fs-find { display: flex; gap: var(--s-2); align-items: center; color: var(--on-surface-faint); }
+.fs-bar .fs-find input {
+  width: 14rem;
+  padding: var(--s-1) 0;
+  border: 0;
+  background: transparent;
+  color: var(--on-surface);
+  font: inherit;
+  font-size: var(--text-body-sm);
+}
+.fs-bar .fs-find input:focus { outline: none; }
+
+/* Editor sits beside the listing on a wide window, under it on a narrow one. */
+.fs-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+@media (min-width: 1100px) {
+  .fs-split:has(.fs-editor:not([hidden])) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+
+.fs-list-icon { color: var(--on-surface-faint); }
+#fs-list li.is-dir .task-title { color: var(--on-surface); }
+#fs-list li[data-path] { cursor: pointer; }
+
+.fs-editor[hidden] { display: none; }
+.fs-editor { display: flex; flex-direction: column; gap: var(--s-3); min-height: 24rem; }
+.fs-editor-head { display: flex; gap: var(--s-3); align-items: center; justify-content: space-between; }
+/* Paths keep their own casing — .label-mono would upper-case them. */
+.fs-editor-head .label-mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: none;
+}
+.fs-editor-actions { display: flex; gap: var(--s-2); align-items: center; }
+
+.fs-editor textarea {
+  flex: 1;
+  min-height: 20rem;
+  padding: var(--s-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+  font-size: var(--text-body-sm);
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.fs-editor textarea:focus { border-color: var(--hairline-strong); outline: none; }
+
+.activity-list .tag { margin-right: var(--s-3); }

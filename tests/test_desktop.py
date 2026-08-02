@@ -15,6 +15,12 @@ def test_unreachable_db_renders_offline_page():
     assert b"No connection" in resp.data
 
 
+def test_quit_button_is_desktop_only():
+    """The web deploy must not offer a button that kills the server."""
+    assert b'id="app-quit"' in create_app({"DESKTOP": True}).test_client().get("/").data
+    assert b'id="app-quit"' not in create_app().test_client().get("/").data
+
+
 @pytest.mark.parametrize("tag, newer", [
     ("v9.0.0", True), ("1.0.1", True), ("1.0.0", False), ("v0.9.9", False), ("nightly", False),
 ])

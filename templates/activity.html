@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Activity · F.R.I.D.A.Y.{% endblock %}
+{% block topbar %}Activity{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="display">File changes</h1>
+    <p class="subtle">Every edit F.R.I.D.A.Y. made on this machine. Stored locally, never uploaded.</p>
+  </div>
+  <a class="btn-ghost" href="{{ url_for('files.files_page') }}">{{ icon('folder', 16) }}Files</a>
+</section>
+
+<section class="card">
+  <ul class="task-list list-condensed activity-list">
+    {% for r in rows %}
+    <li>
+      <span class="tag">{{ r.action }}</span>
+      <span class="task-title">{{ r.path }}</span>
+      <span class="task-due">{{ r.detail }} {{ r.at }}</span>
+    </li>
+    {% else %}
+    <li class="empty-state">
+      {{ icon('history', 24) }}
+      <p class="empty-title">Nothing changed yet</p>
+      <p class="empty-hint">Edits, renames, moves and deletes from the Files page land here.</p>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

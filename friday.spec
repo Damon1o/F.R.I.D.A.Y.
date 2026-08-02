@@ -15,7 +15,7 @@ datas = [
 
 # Blueprints are imported inside create_app(), so PyInstaller's static analysis never sees
 # them. Collect the page packages wholesale rather than listing every module by hand.
-hiddenimports = collect_submodules("pages") + collect_submodules("core") + ["psycopg", "waitress"]
+hiddenimports = collect_submodules("pages") + collect_submodules("core") + ["psycopg", "waitress", "desktop.winicon"]
 
 a = Analysis(
     ["desktop/main.py"],

@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Files · F.R.I.D.A.Y.{% endblock %}
+{% block topbar %}Files{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="display">This machine</h1>
+    <p class="subtle">Browse, edit, rename, move. Deletes go to the Recycle Bin.</p>
+  </div>
+  <a class="btn-ghost" href="{{ url_for('files.activity_page') }}">{{ icon('history', 16) }}Activity</a>
+</section>
+
+<section class="card fs-bar">
+  <nav class="fs-crumbs" id="fs-crumbs" aria-label="Location"></nav>
+  <form class="fs-find" id="fs-find" autocomplete="off">
+    {{ icon('search', 16) }}
+    <input type="search" id="fs-q" placeholder="Find in this folder…" aria-label="Find files here">
+  </form>
+</section>
+
+<section class="fs-split">
+  <div class="card">
+    <ul class="task-list list-condensed" id="fs-list" data-start="{{ roots[0].path if roots else '' }}">
+      <li class="empty-state">
+        {{ icon('folder', 24) }}
+        <p class="empty-title">Loading</p>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card fs-editor" id="fs-editor" hidden>
+    <header class="fs-editor-head">
+      <span class="label-mono" id="fs-editor-name"></span>
+      <div class="fs-editor-actions">
+        <button class="btn-primary" id="fs-save" type="button">Save</button>
+        <button class="icon-btn" id="fs-close" type="button" aria-label="Close editor">{{ icon('x', 18) }}</button>
+      </div>
+    </header>
+    <textarea id="fs-text" spellcheck="false" aria-label="File contents"></textarea>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/files.js') }}"></script>
+{% endblock %}
