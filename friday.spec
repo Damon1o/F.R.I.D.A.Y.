@@ -11,11 +11,17 @@ datas = [
     ("static", "static"),
     ("schema.sql", "."),
     ("skills-lock.json", "."),
+    # whisper.cpp + piper: the native window has no Web Speech API worth using, so voice
+    # runs entirely on these (~145 MB, the bulk of the installer).
+    ("vendor/voice", "vendor/voice"),
 ]
 
 # Blueprints are imported inside create_app(), so PyInstaller's static analysis never sees
 # them. Collect the page packages wholesale rather than listing every module by hand.
-hiddenimports = collect_submodules("pages") + collect_submodules("core") + ["psycopg", "waitress", "desktop.winicon"]
+hiddenimports = (collect_submodules("pages") + collect_submodules("core")
+                 + ["psycopg", "waitress", "desktop.winicon"]
+                 # pywebview picks its GUI backend at runtime, so nothing imports these statically.
+                 + collect_submodules("webview.platforms") + ["clr_loader", "pythonnet"])
 
 a = Analysis(
     ["desktop/main.py"],

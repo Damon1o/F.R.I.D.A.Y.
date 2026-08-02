@@ -2877,3 +2877,41 @@ select.gpa-level { width: 8.5rem; }
 .fs-editor textarea:focus { border-color: var(--hairline-strong); outline: none; }
 
 .activity-list .tag { margin-right: var(--s-3); }
+
+/* ================= Native window title bar ================= */
+:root { --titlebar-h: 34px; }
+
+.titlebar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--titlebar-h);
+  padding-left: var(--s-4);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-container-lowest);
+  user-select: none;
+}
+
+.titlebar-name { color: var(--on-surface-variant); }
+
+.titlebar-controls { display: flex; height: 100%; }
+
+.titlebar-btn {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+}
+
+.titlebar-btn:hover { color: var(--on-surface); background: var(--glass-hover); }
+.titlebar-btn.is-close:hover { color: var(--on-danger); background: var(--danger); }
+
+/* The shell owns the rest of the window. */
+.native-app .app-shell { height: calc(100vh - var(--titlebar-h)); margin-top: var(--titlebar-h); }

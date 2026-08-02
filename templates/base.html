@@ -26,7 +26,20 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 
-<body>
+<body class="{{ 'native-app' if config.NATIVE }}">
+  {# Native window: no OS title bar, so the app draws its own. pywebview-drag-region is
+  what pywebview watches to move the window. #}
+  {% if config.NATIVE %}
+  <header class="titlebar pywebview-drag-region">
+    <span class="titlebar-name label-mono">F.R.I.D.A.Y.</span>
+    <div class="titlebar-controls">
+      <button class="titlebar-btn" id="win-min" type="button" aria-label="Minimize">{{ icon('minus', 16) }}</button>
+      <button class="titlebar-btn" id="win-max" type="button" aria-label="Maximize">{{ icon('square', 14) }}</button>
+      <button class="titlebar-btn is-close" id="win-close" type="button" aria-label="Close">{{ icon('x', 16) }}</button>
+    </div>
+  </header>
+  {% endif %}
+
   <div class="app-shell {{ 'friday-hidden' if friday_visible == 'false' }} {% block shell_mod %}{% endblock %}">
 
     {# ================= Side nav ================= #}
@@ -133,7 +146,8 @@
             aria-label="{{ 'Show' if friday_visible == 'false' else 'Hide' }} F.R.I.D.A.Y. panel"
             aria-expanded="{{ 'false' if friday_visible == 'false' else 'true' }}">{{ icon('message-square', 18)
             }}</button>
-          {% if config.DESKTOP %}
+          {# Edge-fallback window only: the native window closes from its own title bar. #}
+          {% if config.DESKTOP and not config.NATIVE %}
           <button class="icon-btn danger" id="app-quit" type="button" aria-label="Quit F.R.I.D.A.Y.">
             {{ icon('x', 18) }}
           </button>
@@ -175,8 +189,11 @@
   {# onnxruntime is injected by wakeword.js on first use — see loadOrt(). #}
   <script src="{{ url_for('static', filename='js/wakeword.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/update.js') }}" defer></script>
-  {% if config.DESKTOP %}
+  {% if config.DESKTOP and not config.NATIVE %}
   <script>document.getElementById('app-quit').onclick = () => fetch('/api/quit', { method: 'POST' });</script>
+  {% endif %}
+  {% if config.NATIVE %}
+  <script src="{{ url_for('static', filename='js/titlebar.js') }}" defer></script>
   {% endif %}
   {% block scripts %}{% endblock %}
 </body>

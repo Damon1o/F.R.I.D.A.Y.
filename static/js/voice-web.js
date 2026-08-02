@@ -15,7 +15,11 @@
 
   var RATE = 16000;
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var offline = false;
+  // The native desktop window runs on WebView2. It exposes webkitSpeechRecognition but the
+  // service behind it is Chrome-only, so dictation there goes to the bundled whisper/piper
+  // engine instead — which is local anyway, and needs no network.
+  var native = document.body.classList.contains('native-app');
+  var offline = native || !SR;
   var listening = false;
   var rec = null;
 
@@ -309,6 +313,6 @@
 
   fetch('/api/settings/ui')
     .then(function (r) { return r.json(); })
-    .then(function (prefs) { setOffline(prefs.voice_offline === 'true'); })
+    .then(function (prefs) { setOffline(native || !SR || prefs.voice_offline === 'true'); })
     .catch(function () { /* settings unreachable: stay on Web Speech */ });
 })();

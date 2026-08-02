@@ -7,30 +7,40 @@ unsigned Inno Setup installer, GitHub-releases update check.
 ## Shape
 
 No rewrite. The desktop app is the existing Flask app, started on localhost by a
-launcher, displayed in a chrome-less Edge window.
+launcher, displayed in a native frameless WebView2 window (pywebview).
 
 ```
 friday.exe (PyInstaller onedir)
   ├─ picks a free port
-  ├─ serves create_app() with waitress on 127.0.0.1:<port>
-  ├─ launches msedge.exe --app=http://127.0.0.1:<port> --user-data-dir=%LOCALAPPDATA%\FRIDAY\profile
-  └─ waits on the Edge process; window closed ⇒ server exits
+  ├─ serves create_app({"DESKTOP": True}) with waitress on 127.0.0.1:<port>
+  ├─ opens a frameless pywebview window on that URL (the page draws the title bar)
+  └─ window closed ⇒ os._exit(0)
 ```
 
-Why Edge app-mode and not pywebview/Electron:
+**Revised (same day).** The first cut used Edge app-mode (`msedge --app=`) to keep
+the Web Speech API, and shipped that way. It looked like a browser window: Edge's
+frame, Edge's icon, Edge's taskbar grouping. The native window replaces it, and
+voice moves off the browser instead of the browser being chosen for voice:
 
-- pywebview's WebView2 host has no Web Speech API (`SpeechRecognition`,
-  `speechSynthesis`) — `static/js/voice-web.js` and the wake word UX would
-  silently degrade, and mic permission in WebView2 needs a permission handler.
-  Edge app-mode is real Chromium: mic, Web Speech, and openWakeWord's
-  `getUserMedia` all work as they do today.
-- Edge ships with Windows 11 — zero bundled runtime, ~35 MB install instead of
-  ~180 MB (Electron) .
-- A dedicated `--user-data-dir` makes it a separate process we can `wait()` on,
-  and mic permission is granted once and persists in that profile.
+- WebView2 exposes `webkitSpeechRecognition`, but the service behind it is
+  Chrome-only. Dictation and speech now go to the bundled engines
+  (`vendor/voice`: whisper.cpp + piper) through `/api/voice/stt` and `/api/voice/tts`
+  — the offline path `voice-web.js` already had. It is local, so it also works
+  with no network.
+- Mic in WebView2 needs two things: a **secure context** (http://127.0.0.1 is one;
+  a `html=` document is not — `getUserMedia` there never settles), and a host-side
+  `PermissionRequested` handler, which `desktop/main.py` attaches on the UI thread.
+  Result: no permission prompt, ever.
+- Cost: ~145 MB of voice binaries in the installer (26 MB → ~170 MB). Accepted for
+  a real app window and fully offline voice.
+- Edge app-mode remains the fallback when pywebview or the WebView2 runtime is
+  absent; that path keeps the in-app quit button and `--force-dark-mode`.
 
-ponytail: skipped a tray icon, single-instance mutex, and offline voice
-binaries. Add a tray icon when the window is closed accidentally and it matters.
+Not Electron: same window quality, but a Node build step (the project has none)
+and its own runtime on top of the WebView2 one already on every Windows 11 box.
+
+ponytail: skipped a tray icon and a single-instance mutex. Add a tray icon when
+the window is closed accidentally and it matters.
 
 ## Work
 
