@@ -4,7 +4,8 @@ import uuid
 from functools import lru_cache
 from pathlib import Path
 
-from flask import Flask, g, request
+import psycopg
+from flask import Flask, g, render_template, request
 from markupsafe import Markup
 
 from config import Config
@@ -64,7 +65,17 @@ def create_app(config_overrides: dict | None = None) -> Flask:
 
     db.init_app(app)
     with app.app_context():
-        db.init_db()
+        # A laptop opened offline must not crash at boot — the desktop build has no console
+        # to show the traceback in, and the error handler below covers the routes anyway.
+        try:
+            db.init_db()
+        except psycopg.OperationalError:
+            pass
+
+    @app.errorhandler(psycopg.OperationalError)
+    def _db_unreachable(_exc):
+        return render_template("offline.html"), 503
+
     app.jinja_env.globals["icon"] = render_icon
     app.jinja_env.globals["logo"] = render_logo
 

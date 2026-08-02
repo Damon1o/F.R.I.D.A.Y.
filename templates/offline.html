@@ -1,0 +1,39 @@
+{# Standalone on purpose: base.html's shell queries the database, which is exactly what
+   is unavailable here. #}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>No connection — F.R.I.D.A.Y.</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/friday.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <style>
+    .offline {
+      min-height: 100vh;
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: var(--s-3);
+      text-align: center;
+      padding: var(--s-5);
+    }
+
+    .offline p { color: var(--on-surface-variant); max-width: 42ch; }
+    .offline svg { opacity: 0.5; }
+  </style>
+</head>
+
+<body>
+  <main class="offline">
+    {{ icon('cloud', 32) }}
+    <h1>No connection</h1>
+    <p>F.R.I.D.A.Y. keeps her data in the cloud and cannot reach it right now.
+      Check your network, then reload.</p>
+    <button class="btn-ghost" onclick="location.reload()">Reload</button>
+  </main>
+</body>
+
+</html>

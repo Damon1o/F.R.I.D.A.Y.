@@ -17,3 +17,7 @@ vendor/voice/*
 
 .vercel
 .env*
+
+# Desktop build output
+build/
+dist/

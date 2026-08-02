@@ -152,6 +152,7 @@
   <script src="{{ url_for('static', filename='js/voice-web.js') }}"></script>
   {# onnxruntime is injected by wakeword.js on first use — see loadOrt(). #}
   <script src="{{ url_for('static', filename='js/wakeword.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/update.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 

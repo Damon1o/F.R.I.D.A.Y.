@@ -4,9 +4,15 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+# Installed desktop app: settings live in %APPDATA%\FRIDAY\.env (the working directory of
+# an installed exe is not the repo). First file wins — a checkout's .env still overrides
+# nothing, load_dotenv never replaces a variable already set.
+if os.name == "nt":
+    load_dotenv(Path(os.environ.get("APPDATA", "")) / "FRIDAY" / ".env")
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
+VERSION = "1.0.0"
 
 
 class Config:

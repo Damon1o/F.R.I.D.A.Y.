@@ -10,7 +10,11 @@ SCHEMA = Path(__file__).resolve().parent.parent / "schema.sql"
 
 def get_db() -> psycopg.Connection:
     if "db" not in g:
-        g.db = psycopg.connect(current_app.config["DATABASE_URL"], row_factory=dict_row, prepare_threshold=None)
+        # connect_timeout: without it a machine that is offline (or behind a firewall that
+        # drops rather than refuses) blocks here forever — the desktop window would just sit
+        # blank instead of reaching the offline page.
+        g.db = psycopg.connect(current_app.config["DATABASE_URL"], row_factory=dict_row,
+                               prepare_threshold=None, connect_timeout=5)
     return g.db
 
 
