@@ -76,7 +76,12 @@
     });
   }
 
-  window.ctxMenu.bind(list, function (target) {
+  // Bound to the card, not the list: the <ul> shrink-wraps its rows, so with any
+  // task on screen there is no empty pixel inside it left to right-click and
+  // "New task" would be unreachable. The card's padding is that empty space.
+  window.ctxMenu.bind(list.closest('.card'), function (target) {
+    // Inputs keep the browser's own menu — cut/paste beats "New task" there.
+    if (target.closest('input, textarea')) return null;
     var li = target.closest('li[data-id]');
     if (!li) {
       return [{ label: 'New task', run: function () { form.querySelector('[name=title]').focus(); } }];

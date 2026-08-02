@@ -9,7 +9,9 @@
     f.hidden = true;
   });
 
-  window.ctxMenu.bind(list, function (target) {
+  // The card, not the list: a full <ul> leaves no empty pixel to right-click, so
+  // "New skill" would only ever appear on an empty list.
+  window.ctxMenu.bind(list.closest('.card'), function (target) {
     var li = target.closest('li[data-enabled]');
     if (!li) {
       return [{ label: 'New skill', run: function () { add.querySelector('[name=name]').focus(); } }];
