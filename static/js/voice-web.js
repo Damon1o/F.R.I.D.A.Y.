@@ -16,7 +16,7 @@
   var RATE = 16000;
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   // The native desktop window runs on WebView2. It exposes webkitSpeechRecognition but the
-  // service behind it is Chrome-only, so dictation there goes to the bundled whisper/piper
+  // service behind it is Chrome-only, so dictation there goes to the bundled whisper
   // engine instead — which is local anyway, and needs no network.
   var native = document.body.classList.contains('native-app');
   var offline = native || !SR;
@@ -34,19 +34,28 @@
   }
 
   // Offline mode failing mid-flow must not kill voice outright: drop back to Web Speech and
-  // say so once, instead of one console line per utterance.
+  // say so once, instead of one console line per utterance. The native window has no such
+  // fallback (its SpeechRecognition never resolves), so it stays offline — returns false
+  // there so callers don't retry into an endless record/fail loop.
   var warned = false;
 
   function offlineFailed(err) {
-    offline = false;
-    if (warned) return;
-    warned = true;
-    console.warn('offline voice unavailable, falling back to Web Speech:', err);
+    if (!native) offline = false;
+    if (!warned) {
+      warned = true;
+      console.warn('offline voice unavailable' + (native ? '' : ', falling back to Web Speech') + ':', err);
+    }
+    return !native;
   }
+
+  // Set only by the mic, cleared as soon as a reply consumes it. Keeps the auto-reopen below
+  // to spoken turns: a typed question must never leave a hot mic behind.
+  var voiceTurn = false;
 
   function submitTranscript(text) {
     text = (text || '').trim();
     if (!text) return;
+    voiceTurn = true;
     input.value = text;
     form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true }));
   }
@@ -104,7 +113,9 @@
   function speak(text, done) {
     text = sayable(text);
     if (!text) { if (done) done(); return; }
-    offline ? speakOffline(text, done) : speakWeb(text, done);
+    // Only dictation is broken on WebView2 — speechSynthesis there is the local OS voice
+    // and works fine, so the native window keeps the Web Speech voice and offline STT.
+    offline && !native ? speakOffline(text, done) : speakWeb(text, done);
   }
 
   function speakWeb(text, done) {
@@ -122,7 +133,13 @@
 
   // Interrupt — stop button, Esc, or voice barge-in. Cuts the reply mid-sentence on
   // either engine. Silent when nothing is speaking, so callers needn't check first.
+  // Bumped on every interrupt. cancel() still fires onend, so the auto-reopen below compares
+  // this against the value it captured and stays shut if anything cut the reply short.
+  var speakSeq = 0;
+
   function stopSpeaking() {
+    voiceTurn = false;
+    speakSeq++;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (player) { player.pause(); player = null; }
     window.fridaySpeaking = false;
@@ -171,7 +188,16 @@
           m.target.classList.contains('assistant') &&
           !m.target.classList.contains('is-pending') &&
           !m.target.classList.contains('is-stopped')) {   // interrupted: don't read it back
-          speak(m.target.textContent);
+          var reply = m.target.textContent;
+          // F.R.I.D.A.Y. asked something back: reopen the mic once she's done speaking, so a
+          // spoken exchange continues without another button press or wake word. The 150 ms
+          // gap keeps the tail of the reply out of the transcript, same as fridayAck.
+          var followUp = voiceTurn && /\?["')\]]*\s*$/.test(reply);
+          var seq = speakSeq;
+          voiceTurn = false;
+          speak(reply, followUp ? function () {
+            if (seq === speakSeq) setTimeout(startListening, 150);
+          } : null);
         }
       });
     }).observe(list, { subtree: true, attributes: true, attributeFilter: ['class'] });
@@ -202,7 +228,7 @@
   var stopRecord = null;
 
   function recordOffline() {
-    if (!navigator.mediaDevices) { offlineFailed('no mediaDevices'); startListening(); return; }
+    if (!navigator.mediaDevices) { if (offlineFailed('no mediaDevices')) startListening(); return; }
     navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } }).then(function (stream) {
       var ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: RATE });
       var node = ctx.createScriptProcessor(1024, 1, 1);
@@ -251,8 +277,9 @@
       cap = setTimeout(finish, MAX_MS);
       ctx.resume();
     }).catch(function (err) {
-      offlineFailed(err);
-      startListening();                          // retry the same utterance on Web Speech
+      listening = false;
+      btn.classList.remove('is-live');
+      if (offlineFailed(err)) startListening();  // retry the same utterance on Web Speech
     });
   }
 
@@ -265,7 +292,7 @@
         return r.json();
       })
       .then(function (d) { submitTranscript(d.transcript); })
-      .catch(function (err) { offlineFailed(err); startListening(); });
+      .catch(function (err) { if (offlineFailed(err)) startListening(); });
   }
 
   function wavBytes(chunks, samples) {
@@ -303,7 +330,7 @@
   };
 
   function setOffline(on) {
-    offline = !!on;
+    offline = native || !!on;   // the native window can't leave offline: see `native` above
     warned = false;
     if (offline) btn.hidden = false;   // the offline path needs no SpeechRecognition
     else if (!SR) btn.hidden = true;
@@ -313,6 +340,6 @@
 
   fetch('/api/settings/ui')
     .then(function (r) { return r.json(); })
-    .then(function (prefs) { setOffline(native || !SR || prefs.voice_offline === 'true'); })
+    .then(function (prefs) { setOffline(!SR || prefs.voice_offline === 'true'); })
     .catch(function () { /* settings unreachable: stay on Web Speech */ });
 })();

@@ -13,6 +13,8 @@ def _bin(name: str) -> Path:
 
 PIPER_BIN = _bin("piper")
 PIPER_VOICE = VENDOR / "en_GB-alan-medium.onnx"
+# A reply is a few sentences; anything past this is a wedged binary holding a request thread.
+TIMEOUT = 60
 
 
 class TTSError(RuntimeError):
@@ -26,10 +28,15 @@ def available() -> bool:
 
 def synth(text: str, out_path: str) -> str:
     """Synthesize `text` to a WAV at out_path (16 kHz mono). Returns out_path."""
-    proc = subprocess.run(
-        [str(PIPER_BIN), "-m", str(PIPER_VOICE), "-f", str(out_path)],
-        input=text, capture_output=True, text=True,
-    )
+    try:
+        proc = subprocess.run(
+            [str(PIPER_BIN), "-m", str(PIPER_VOICE), "-f", str(out_path)],
+            input=text, capture_output=True, text=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            timeout=TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        raise TTSError("piper timed out")
     if proc.returncode != 0:
         raise TTSError(proc.stderr.strip() or "piper failed")
     return out_path

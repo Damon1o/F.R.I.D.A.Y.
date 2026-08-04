@@ -13,6 +13,8 @@ def _bin(name: str) -> Path:
 
 WHISPER_BIN = _bin("whisper-cli")
 WHISPER_MODEL = VENDOR / "ggml-tiny.en.bin"
+# Clips are capped at ~10 s; anything past this is a wedged binary holding a request thread.
+TIMEOUT = 60
 
 
 class STTError(RuntimeError):
@@ -26,10 +28,16 @@ def available() -> bool:
 
 def transcribe(wav_path: str) -> str:
     """Return the transcript of a 16 kHz mono 16-bit WAV. Empty string if nothing recognized."""
-    proc = subprocess.run(
-        [str(WHISPER_BIN), "-m", str(WHISPER_MODEL), "-f", str(wav_path), "-nt", "-np"],
-        capture_output=True, text=True,
-    )
+    try:
+        proc = subprocess.run(
+            [str(WHISPER_BIN), "-m", str(WHISPER_MODEL), "-f", str(wav_path), "-nt", "-np"],
+            capture_output=True, text=True,
+            # whisper-cli is a console app: without this Windows flashes a terminal per utterance.
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            timeout=TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        raise STTError("whisper timed out")
     if proc.returncode != 0:
         raise STTError(proc.stderr.strip() or "whisper failed")
     return proc.stdout.strip()
